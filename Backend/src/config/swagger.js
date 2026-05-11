@@ -7,6 +7,10 @@ export const swaggerDocument = {
   },
   servers: [
     {
+      url: 'https://friendly-meme-rvw764xxxr7fwjxq-3000.app.github.dev', //via code spaces
+      description: 'Servidor de desenvolvimento (GitHub Codespaces)'
+    },
+    {
       url: 'http://localhost:3000',
       description: 'Servidor local'
     }

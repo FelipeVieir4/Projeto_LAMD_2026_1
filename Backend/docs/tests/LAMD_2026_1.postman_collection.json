@@ -5,6 +5,37 @@
     "description": "Colecao de testes da API para Sprint 1. Inclui health, auth e admin specialties.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "(function () {",
+          "  var isInitialized = pm.collectionVariables.get('runInitialized') === 'true';",
+          "  var baseUrl = pm.collectionVariables.get('baseUrl') || 'http://localhost:3000';",
+          "  var defaultPassword = pm.collectionVariables.get('defaultPassword') || 'SenhaForte123';",
+          "  var adminApiKey = pm.collectionVariables.get('adminApiKey') || 'troque_esta_chave_admin';",
+          "",
+          "  pm.collectionVariables.set('baseUrl', baseUrl);",
+          "  pm.collectionVariables.set('defaultPassword', defaultPassword);",
+          "  pm.collectionVariables.set('adminApiKey', adminApiKey);",
+          "",
+          "  if (!isInitialized) {",
+          "    var runId = Date.now().toString();",
+          "    pm.collectionVariables.set('runId', runId);",
+          "    pm.collectionVariables.set('customerEmail', 'cliente.' + runId + '@lamd.local');",
+          "    pm.collectionVariables.set('partnerEmail', 'parceiro.' + runId + '@lamd.local');",
+          "    pm.collectionVariables.set('customerToken', '');",
+          "    pm.collectionVariables.set('partnerToken', '');",
+          "    pm.collectionVariables.set('specialtyId', '');",
+          "    pm.collectionVariables.set('runInitialized', 'true');",
+          "  }",
+          "})();"
+        ]
+      }
+    }
+  ],
   "item": [
     {
       "name": "Health",
@@ -456,7 +487,13 @@
                   "pm.test('Delete flag true', function () {",
                   "  var data = pm.response.json();",
                   "  pm.expect(data.deleted).to.eql(true);",
-                  "});"
+                  "});",
+                  "",
+                  "pm.collectionVariables.unset('runInitialized');",
+                  "pm.collectionVariables.unset('runId');",
+                  "pm.collectionVariables.unset('customerToken');",
+                  "pm.collectionVariables.unset('partnerToken');",
+                  "pm.collectionVariables.unset('specialtyId');"
                 ]
               }
             }
@@ -508,7 +545,7 @@
     },
     {
       "key": "adminApiKey",
-      "value": "troque-esta-chave"
+      "value": "troque_esta_chave_admin"
     },
     {
       "key": "customerToken",

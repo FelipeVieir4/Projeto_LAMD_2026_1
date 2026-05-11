@@ -10,10 +10,10 @@ import {
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'dev-secret-change-me';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? '1d';
-const PASSWORD_MIN_LENGTH = 8;
-const PBKDF2_ITERATIONS = 120000;
-const PBKDF2_KEY_LENGTH = 64;
-const PBKDF2_DIGEST = 'sha512';
+const PASSWORD_MIN_LENGTH = parseInt(process.env.PASSWORD_MIN_LENGTH ?? '8', 10);
+const PBKDF2_ITERATIONS = parseInt(process.env.PBKDF2_ITERATIONS ?? '120000', 10);
+const PBKDF2_KEY_LENGTH = parseInt(process.env.PBKDF2_KEY_LENGTH ?? '64', 10);
+const PBKDF2_DIGEST = process.env.PBKDF2_DIGEST ?? 'sha512';
 
 function createAuthError(message, code, status) {
   const error = new Error(message);
