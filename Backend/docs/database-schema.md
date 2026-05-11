@@ -28,10 +28,28 @@ Representa a conta do App_parceiro e o cadastro do prestador de serviço.
 - `document`
 - `company_name`
 - `bio`
-- `specialties`
 - `is_active`
 - `created_at`
 - `updated_at`
+
+### specialties
+
+Catálogo de especialidades gerenciado pela área administrativa.
+
+- `id`
+- `name`
+- `description`
+- `is_active`
+- `created_at`
+- `updated_at`
+
+### partner_specialties
+
+Relaciona parceiros e especialidades.
+
+- `partner_id`
+- `specialty_id`
+- `created_at`
 
 ### regions
 
@@ -122,6 +140,8 @@ Registra as notificações enviadas para parceiros.
 
 - Um `customer` pode ter muitos `tickets`.
 - Um `partner` pode estar em várias `regions`.
+- Um `partner` pode ter várias `specialties`.
+- Uma `specialty` pode estar associada a vários `partners`.
 - Uma `region` pode ter vários `partners`.
 - Um `service` pode estar em vários `tickets`.
 - Um `ticket` pertence a um `customer`, uma `region` e um `service`.

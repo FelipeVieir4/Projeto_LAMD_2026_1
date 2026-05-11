@@ -1,8 +1,8 @@
 import { getAuthenticatedAccount } from './auth.service.js';
 
-export function authenticateJwt(request, response, next) {
+export async function authenticateJwt(request, response, next) {
   try {
-    const result = getAuthenticatedAccount(request.headers.authorization);
+    const result = await getAuthenticatedAccount(request.headers.authorization);
     request.auth = result.tokenPayload;
     request.user = result.user;
     next();

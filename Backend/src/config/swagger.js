@@ -17,6 +17,11 @@ export const swaggerDocument = {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT'
+      },
+      AdminKeyAuth: {
+        type: 'apiKey',
+        in: 'header',
+        name: 'x-admin-key'
       }
     }
   },
@@ -34,6 +39,10 @@ export const swaggerDocument = {
                   type: 'object',
                   properties: {
                     status: {
+                      type: 'string',
+                      example: 'ok'
+                    },
+                    database: {
                       type: 'string',
                       example: 'ok'
                     },
@@ -189,6 +198,160 @@ export const swaggerDocument = {
         responses: {
           200: {
             description: 'Conta autenticada'
+          }
+        }
+      }
+    },
+    '/admin/specialties': {
+      get: {
+        tags: ['Admin'],
+        summary: 'Lista especialidades cadastradas',
+        security: [
+          {
+            BearerAuth: []
+          },
+          {
+            AdminKeyAuth: []
+          }
+        ],
+        parameters: [
+          {
+            in: 'query',
+            name: 'includeInactive',
+            schema: {
+              type: 'boolean'
+            },
+            required: false,
+            description: 'Quando true, inclui especialidades inativas.'
+          }
+        ],
+        responses: {
+          200: {
+            description: 'Especialidades listadas com sucesso'
+          }
+        }
+      },
+      post: {
+        tags: ['Admin'],
+        summary: 'Cria uma nova especialidade',
+        security: [
+          {
+            BearerAuth: []
+          },
+          {
+            AdminKeyAuth: []
+          }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name'],
+                properties: {
+                  name: {
+                    type: 'string',
+                    example: 'Elétrica residencial'
+                  },
+                  description: {
+                    type: 'string',
+                    example: 'Instalação e manutenção elétrica.'
+                  },
+                  isActive: {
+                    type: 'boolean',
+                    example: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: {
+            description: 'Especialidade criada com sucesso'
+          }
+        }
+      }
+    },
+    '/admin/specialties/{id}': {
+      put: {
+        tags: ['Admin'],
+        summary: 'Atualiza uma especialidade',
+        security: [
+          {
+            BearerAuth: []
+          },
+          {
+            AdminKeyAuth: []
+          }
+        ],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: {
+              type: 'string',
+              format: 'uuid'
+            }
+          }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: {
+                    type: 'string',
+                    example: 'Hidráulica'
+                  },
+                  description: {
+                    type: 'string',
+                    example: 'Serviços hidráulicos em geral.'
+                  },
+                  isActive: {
+                    type: 'boolean',
+                    example: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Especialidade atualizada com sucesso'
+          }
+        }
+      },
+      delete: {
+        tags: ['Admin'],
+        summary: 'Remove uma especialidade',
+        security: [
+          {
+            BearerAuth: []
+          },
+          {
+            AdminKeyAuth: []
+          }
+        ],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: {
+              type: 'string',
+              format: 'uuid'
+            }
+          }
+        ],
+        responses: {
+          200: {
+            description: 'Especialidade removida com sucesso'
           }
         }
       }

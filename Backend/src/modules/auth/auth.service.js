@@ -96,7 +96,7 @@ function assertProgramPayload(program, payload) {
   return normalizedProgram;
 }
 
-export function registerAccount(payload) {
+export async function registerAccount(payload) {
   const program = assertProgramPayload(payload?.program, payload);
   const { email, password } = validateCommonFields(payload);
 
@@ -113,7 +113,7 @@ export function registerAccount(payload) {
       throw createAuthError('Informe o nome do cliente.', 'MISSING_NAME', 400);
     }
 
-    const user = createUser(program, {
+    const user = await createUser(program, {
       ...sharedData,
       name
     });
@@ -137,7 +137,7 @@ export function registerAccount(payload) {
     throw createAuthError('Informe o documento do parceiro.', 'MISSING_DOCUMENT', 400);
   }
 
-  const user = createUser(program, {
+  const user = await createUser(program, {
     ...sharedData,
     companyName,
     document,
@@ -153,10 +153,10 @@ export function registerAccount(payload) {
   };
 }
 
-export function loginAccount(payload) {
+export async function loginAccount(payload) {
   const program = assertProgramPayload(payload?.program, payload);
   const { email, password } = validateCommonFields(payload);
-  const user = findUserByEmail(program, email);
+  const user = await findUserByEmail(program, email);
 
   if (!user || !verifyPassword(password, user.passwordHash)) {
     throw createAuthError('Credenciais inválidas.', 'INVALID_CREDENTIALS', 401);
@@ -181,7 +181,7 @@ function extractBearerToken(authorizationHeader) {
   return token;
 }
 
-export function getAuthenticatedAccount(authorizationHeader) {
+export async function getAuthenticatedAccount(authorizationHeader) {
   const token = extractBearerToken(authorizationHeader);
 
   let payload;
@@ -192,7 +192,7 @@ export function getAuthenticatedAccount(authorizationHeader) {
     throw createAuthError('Token inválido ou expirado.', 'UNAUTHORIZED', 401);
   }
 
-  const user = findUserById(payload.program, payload.sub);
+  const user = await findUserById(payload.program, payload.sub);
 
   if (!user) {
     throw createAuthError('Usuário não encontrado para este token.', 'UNAUTHORIZED', 401);

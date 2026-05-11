@@ -1,0 +1,526 @@
+{
+  "info": {
+    "_postman_id": "6fceebf2-3a3d-4f1b-9f93-d71d47de4a2c",
+    "name": "LAMD 2026.1 - Backend API",
+    "description": "Colecao de testes da API para Sprint 1. Inclui health, auth e admin specialties.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has status, database and timestamp', function () {",
+                  "  var data = pm.response.json();",
+                  "  pm.expect(data).to.have.property('status');",
+                  "  pm.expect(data).to.have.property('database');",
+                  "  pm.expect(['ok', 'unavailable']).to.include(data.database);",
+                  "  pm.expect(data).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /auth/register - customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has user and token', function () {",
+                  "  var data = pm.response.json();",
+                  "  pm.expect(data).to.have.property('user');",
+                  "  pm.expect(data).to.have.property('token');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"program\": \"customer\",\n  \"name\": \"Cliente Teste\",\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{defaultPassword}}\",\n  \"phone\": \"+55 11 99999-9999\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /auth/register - partner",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has partner user and token', function () {",
+                  "  var data = pm.response.json();",
+                  "  pm.expect(data.user.program).to.eql('partner');",
+                  "  pm.expect(data).to.have.property('token');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"program\": \"partner\",\n  \"companyName\": \"Parceiro Teste LTDA\",\n  \"document\": \"12.345.678/0001-90\",\n  \"email\": \"{{partnerEmail}}\",\n  \"password\": \"{{defaultPassword}}\",\n  \"phone\": \"+55 11 98888-7777\",\n  \"bio\": \"Atendimento geral\",\n  \"specialties\": [\"eletrica\", \"hidraulica\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /auth/login - customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var data = pm.response.json();",
+                  "if (data.token) {",
+                  "  pm.collectionVariables.set('customerToken', data.token);",
+                  "}",
+                  "",
+                  "pm.test('Customer token saved', function () {",
+                  "  pm.expect(pm.collectionVariables.get('customerToken')).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"program\": \"customer\",\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{defaultPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /auth/login - partner",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var data = pm.response.json();",
+                  "if (data.token) {",
+                  "  pm.collectionVariables.set('partnerToken', data.token);",
+                  "}",
+                  "",
+                  "pm.test('Partner token saved', function () {",
+                  "  pm.expect(pm.collectionVariables.get('partnerToken')).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"program\": \"partner\",\n  \"email\": \"{{partnerEmail}}\",\n  \"password\": \"{{defaultPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /auth/me - customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Authenticated user is customer', function () {",
+                  "  var data = pm.response.json();",
+                  "  pm.expect(data.user.program).to.eql('customer');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin - Specialties",
+      "item": [
+        {
+          "name": "GET /admin/specialties",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has specialties array', function () {",
+                  "  var data = pm.response.json();",
+                  "  pm.expect(data.specialties).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{partnerToken}}"
+              },
+              {
+                "key": "x-admin-key",
+                "value": "{{adminApiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/specialties?includeInactive=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "specialties"
+              ],
+              "query": [
+                {
+                  "key": "includeInactive",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /admin/specialties",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var data = pm.response.json();",
+                  "if (data.specialty && data.specialty.id) {",
+                  "  pm.collectionVariables.set('specialtyId', data.specialty.id);",
+                  "}",
+                  "",
+                  "pm.test('Specialty id saved', function () {",
+                  "  pm.expect(pm.collectionVariables.get('specialtyId')).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{partnerToken}}"
+              },
+              {
+                "key": "x-admin-key",
+                "value": "{{adminApiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pintura\",\n  \"description\": \"Servicos de pintura residencial\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/specialties",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "specialties"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /admin/specialties/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Specialty name updated', function () {",
+                  "  var data = pm.response.json();",
+                  "  pm.expect(data.specialty.name).to.eql('Pintura Residencial');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{partnerToken}}"
+              },
+              {
+                "key": "x-admin-key",
+                "value": "{{adminApiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pintura Residencial\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/specialties/{{specialtyId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "specialties",
+                "{{specialtyId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /admin/specialties/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Delete flag true', function () {",
+                  "  var data = pm.response.json();",
+                  "  pm.expect(data.deleted).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{partnerToken}}"
+              },
+              {
+                "key": "x-admin-key",
+                "value": "{{adminApiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/specialties/{{specialtyId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "specialties",
+                "{{specialtyId}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "customerEmail",
+      "value": "cliente.teste@lamd.local"
+    },
+    {
+      "key": "partnerEmail",
+      "value": "parceiro.teste@lamd.local"
+    },
+    {
+      "key": "defaultPassword",
+      "value": "SenhaForte123"
+    },
+    {
+      "key": "adminApiKey",
+      "value": "troque-esta-chave"
+    },
+    {
+      "key": "customerToken",
+      "value": ""
+    },
+    {
+      "key": "partnerToken",
+      "value": ""
+    },
+    {
+      "key": "specialtyId",
+      "value": ""
+    }
+  ]
+}

@@ -38,3 +38,9 @@ O sistema terá três partes iniciais:
 - [App](App)
 - [App_parceiro](App_parceiro)
 
+## Documentação técnica
+
+- Diagramas de arquitetura e fluxo: [Backend/docs/diagrams.md](Backend/docs/diagrams.md)
+- Schema de dados: [Backend/docs/database-schema.md](Backend/docs/database-schema.md)
+- Script SQL inicial: [Backend/docs/sql/001_initial_schema.sql](Backend/docs/sql/001_initial_schema.sql)
+

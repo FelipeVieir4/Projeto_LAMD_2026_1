@@ -8,27 +8,27 @@ function handleAuthError(response, error) {
   });
 }
 
-export function register(request, response) {
+export async function register(request, response) {
   try {
-    const result = registerAccount(request.body);
+    const result = await registerAccount(request.body);
     response.status(201).json(result);
   } catch (error) {
     handleAuthError(response, error);
   }
 }
 
-export function login(request, response) {
+export async function login(request, response) {
   try {
-    const result = loginAccount(request.body);
+    const result = await loginAccount(request.body);
     response.status(200).json(result);
   } catch (error) {
     handleAuthError(response, error);
   }
 }
 
-export function me(request, response) {
+export async function me(request, response) {
   try {
-    const result = getAuthenticatedAccount(request.headers.authorization);
+    const result = await getAuthenticatedAccount(request.headers.authorization);
     response.status(200).json(result);
   } catch (error) {
     handleAuthError(response, error);
