@@ -352,6 +352,11 @@
             "method": "POST",
             "header": [
               {
+                "key": "Authorization",
+                "value": "Bearer {{partnerToken}}",
+                "type": "text"
+              },
+              {
                 "key": "x-admin-key",
                 "value": "{{adminApiKey}}"
               },
@@ -396,6 +401,11 @@
             "method": "GET",
             "header": [
               {
+                "key": "Authorization",
+                "value": "Bearer {{partnerToken}}",
+                "type": "text"
+              },
+              {
                 "key": "x-admin-key",
                 "value": "{{adminApiKey}}"
               }
@@ -437,6 +447,11 @@
           "request": {
             "method": "PUT",
             "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{partnerToken}}",
+                "type": "text"
+              },
               {
                 "key": "x-admin-key",
                 "value": "{{adminApiKey}}"
@@ -481,6 +496,11 @@
           "request": {
             "method": "DELETE",
             "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{partnerToken}}",
+                "type": "text"
+              },
               {
                 "key": "x-admin-key",
                 "value": "{{adminApiKey}}"
