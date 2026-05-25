@@ -1,15 +1,13 @@
-version: '3.8'
-
 services:
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: chamados-rabbitmq
     ports:
-      - "5672:5672"     # AMQP (usado pelo backend)
-      - "15672:15672"   # Management UI (http://localhost:15672)
+      - "5672:5672"
+      - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin123
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -17,6 +15,22 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: chamados-backend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./Backend/.env
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   rabbitmq_data:

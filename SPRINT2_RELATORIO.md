@@ -3,49 +3,62 @@
 **Disciplina:** LDAMD – Lab. de Desenvolvimento de Aplicações Móveis e Distribuídas  
 **Aluno:** Luiz Felipe Vieira  
 **Período:** 1º Semestre 2026  
-**Data de entrega:** 25/05/2026  
+**Prazo:** 25/05/2026
 
 ---
 
-## 1. O que foi implementado
+## 1. Domínio do Projeto
 
-### 1.1 Domínio do projeto
+O sistema é uma **plataforma de chamados técnicos domiciliares**. Dois perfis de usuário interagem pela plataforma:
 
-O sistema é uma **plataforma de chamados técnicos domiciliares** (ex.: elétrica, hidráulica, pintura). Dois perfis de usuário:
+| Perfil | Papel |
+|---|---|
+| **Cliente** (`customer`) | Abre chamados informando especialidade, título, descrição e endereço |
+| **Parceiro** (`partner`) | Recebe novos chamados, aceita ou recusa, executa e conclui o atendimento |
 
-- **Cliente (`customer`)** – abre chamados informando a especialidade, título, descrição e endereço.
-- **Parceiro (`partner`)** – recebe notificações de novos chamados, aceita, executa e conclui o atendimento.
+Exemplos de especialidades: elétrica, hidráulica, pintura, marcenaria.
 
-### 1.2 Middleware Orientado a Mensagens (MOM) — RabbitMQ
+---
 
-O MOM escolhido foi o **RabbitMQ**, executado via Docker. Configuração:
+## 2. MOM Escolhido: RabbitMQ
+
+### Por que RabbitMQ?
+
+O **RabbitMQ** foi escolhido como broker de mensagens pelos seguintes motivos:
+
+- É o MOM mais referenciado na literatura de integração de sistemas (Hohpe & Woolf, 2003)
+- Oferece **persistência de mensagens** (mensagens não são perdidas se o consumidor estiver offline)
+- Possui uma **Management UI** visual (`http://localhost:15672`) que permite evidenciar o funcionamento das filas em tempo real — essencial para demonstração acadêmica
+- Suporta o padrão **Topic Exchange** (pub/sub com roteamento por chave), permitindo múltiplos consumidores independentes para o mesmo evento
+
+### Configuração do broker
 
 | Parâmetro | Valor |
 |---|---|
-| Imagem Docker | `rabbitmq:3-management-alpine` |
+| Imagem | `rabbitmq:3-management-alpine` |
 | Porta AMQP | `5672` |
 | Porta Management UI | `15672` |
 | Exchange | `chamados` (tipo: **topic**, durable) |
-| Usuário | `admin` / `admin123` |
+| Credenciais | `guest` / `guest` |
 
-A escolha do tipo **topic exchange** permite rotear mensagens por padrão de chave (ex.: `ticket.*`), facilitando adicionar novos consumidores no futuro sem alterar os produtores.
+---
 
-### 1.3 Eventos implementados
+## 3. Eventos Implementados
 
-Dois eventos são publicados em momentos distintos do fluxo de negócio:
+O backend publica eventos em **dois momentos distintos** do fluxo de negócio.
 
-#### Evento 1 – `ticket.created`
+### Evento 1 — `ticket.created`
 
-| Campo | Valor |
+| Atributo | Valor |
 |---|---|
-| **Nome do evento** | `ticket.created` |
-| **Produtor** | `tickets.service.js` → método `createTicket()` |
-| **Consumidor** | `messaging/consumer.js` → `handleTicketCreated()` |
+| **Routing key** | `ticket.created` |
 | **Fila** | `ticket_created_queue` |
 | **Exchange** | `chamados` |
-| **Routing key** | `ticket.created` |
+| **Produtor** | `tickets.service.js` → `createTicket()` |
+| **Consumidor** | `messaging/consumer.js` → `handleTicketCreated()` |
+| **Gatilho** | `POST /tickets` concluído com sucesso |
 
-**Payload JSON de exemplo:**
+**Payload JSON:**
 ```json
 {
   "ticketId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -62,23 +75,22 @@ Dois eventos são publicados em momentos distintos do fluxo de negócio:
 }
 ```
 
-**Quando é disparado:** imediatamente após o cliente fazer `POST /tickets` com sucesso.  
-**Ação do consumidor:** loga o novo chamado no servidor, identificando id, especialidade e cliente. Em sprints futuras, notificará os parceiros via WebSocket/push.
+**Ação do consumidor:** registra no log do servidor os detalhes do novo chamado. Em sprints futuras, este consumidor notificará parceiros disponíveis via WebSocket.
 
 ---
 
-#### Evento 2 – `ticket.status_changed`
+### Evento 2 — `ticket.status_changed`
 
-| Campo | Valor |
+| Atributo | Valor |
 |---|---|
-| **Nome do evento** | `ticket.status_changed` |
-| **Produtor** | `tickets.service.js` → método `updateTicketStatus()` |
-| **Consumidor** | `messaging/consumer.js` → `handleTicketStatusChanged()` |
+| **Routing key** | `ticket.status_changed` |
 | **Fila** | `ticket_status_changed_queue` |
 | **Exchange** | `chamados` |
-| **Routing key** | `ticket.status_changed` |
+| **Produtor** | `tickets.service.js` → `updateTicketStatus()` |
+| **Consumidor** | `messaging/consumer.js` → `handleTicketStatusChanged()` |
+| **Gatilho** | `PATCH /tickets/:id/status` concluído com sucesso |
 
-**Payload JSON de exemplo:**
+**Payload JSON:**
 ```json
 {
   "ticketId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -95,116 +107,155 @@ Dois eventos são publicados em momentos distintos do fluxo de negócio:
 }
 ```
 
-**Quando é disparado:** toda vez que `PATCH /tickets/:id/status` é chamado com sucesso.  
-**Ação do consumidor:** loga a transição de status. Maquina de estados válida: `pending → accepted → in_progress → completed` (ou `cancelled` em qualquer etapa).
+**Ação do consumidor:** registra no log a transição de status (`pending → accepted`). Em sprints futuras, notificará o cliente sobre a mudança.
 
 ---
 
-## 2. Arquitetura do MOM
+## 4. Arquitetura da Comunicação Assíncrona
 
 ```
-Cliente HTTP          Backend (Express + Node.js)          RabbitMQ
-─────────────         ───────────────────────────          ────────────────────────
-                                                            Exchange: chamados (topic)
-POST /tickets    ──►  tickets.service.createTicket()  ──►  routing key: ticket.created
-                              │                                      │
-                              │ persiste no PostgreSQL               ▼
-                              │                            Queue: ticket_created_queue
-                                                                     │
-PATCH /tickets                                                        │ (async)
-/:id/status      ──►  tickets.service.updateStatus()                 ▼
-                              │                       consumer.handleTicketCreated()
-                              │ atualiza no PostgreSQL     [log no terminal]
-                              │
-                              └──►  routing key: ticket.status_changed
-                                             │
-                                             ▼
-                                   Queue: ticket_status_changed_queue
-                                             │
-                                             │ (async)
-                                             ▼
-                                   consumer.handleTicketStatusChanged()
-                                       [log no terminal]
+┌─────────────────────────────────────────────────────────────────┐
+│                        Docker Compose                           │
+│                                                                 │
+│  ┌──────────────────────┐        ┌──────────────────────────┐  │
+│  │   Backend (Node.js)  │        │  RabbitMQ (broker)       │  │
+│  │                      │        │                          │  │
+│  │  POST /tickets        │──────► │  Exchange: chamados       │  │
+│  │    └─ publishEvent() │ AMQP   │  (type: topic, durable)  │  │
+│  │                      │        │                          │  │
+│  │  PATCH /:id/status   │──────► │  ┌─ ticket_created_queue │  │
+│  │    └─ publishEvent() │        │  └─ ticket_status_queue  │  │
+│  │                      │        │           │              │  │
+│  │  startConsumers()    │◄───────│───────────┘              │  │
+│  │    ├─ handleCreated  │ async  │  (sem REST direto)       │  │
+│  │    └─ handleStatus   │        │                          │  │
+│  └──────────────────────┘        └──────────────────────────┘  │
+│           │ porta 3000                    │ porta 15672         │
+└───────────┼───────────────────────────────┼─────────────────────┘
+            ▼                               ▼
+      Cliente HTTP                  Management UI
+  (Postman / Swagger)           http://localhost:15672
 ```
 
-**Ponto-chave da assincronicidade:** o produtor (`tickets.service.js`) publica a mensagem no exchange e **retorna imediatamente** para o cliente HTTP. O consumidor processa a mensagem **em paralelo**, sem bloqueio da requisição REST. Não há chamada REST direta entre produtor e consumidor.
+**Por que isso é comunicação assíncrona de verdade?**
+
+1. O `POST /tickets` salva o chamado no banco, chama `publishEvent()` e **retorna 201 imediatamente** ao cliente HTTP
+2. O RabbitMQ entrega a mensagem para a fila `ticket_created_queue`
+3. O `consumer.js` (rodando em paralelo, no mesmo processo) processa a mensagem **sem nenhuma chamada REST** — apenas consome da fila
+4. Se o consumidor estiver temporariamente indisponível, a mensagem fica na fila até ser processada (graças ao `durable: true`)
 
 ---
 
-## 3. Módulo de Tickets (novos endpoints REST)
+## 5. Máquina de Estados dos Tickets
 
-Todos os endpoints requerem autenticação JWT (`Authorization: Bearer <token>`).
+```
+          [CLIENTE]            [PARCEIRO]
+              │                    │
+   POST /tickets                   │
+              │                    │
+              ▼                    │
+          ┌────────┐               │
+          │PENDING │◄──────────────┘
+          └────┬───┘   GET /tickets?pending=true
+               │
+               │ PATCH /status { status: "accepted" }
+               ▼
+          ┌──────────┐
+          │ACCEPTED  │
+          └────┬─────┘
+               │
+               │ { status: "in_progress" }
+               ▼
+          ┌─────────────┐
+          │ IN_PROGRESS │
+          └──────┬──────┘
+                 │
+                 │ { status: "completed" }
+                 ▼
+          ┌───────────┐
+          │ COMPLETED │
+          └───────────┘
 
-| Método | Rota | Quem pode usar | Dispara evento? |
+  Qualquer estado → CANCELLED (cliente ou parceiro)
+```
+
+Cada transição dispara um evento `ticket.status_changed` no RabbitMQ.
+
+---
+
+## 6. Novos Endpoints REST (Sprint 2)
+
+| Método | Rota | Quem usa | Evento publicado |
 |---|---|---|---|
 | `POST` | `/tickets` | Cliente | `ticket.created` |
 | `GET` | `/tickets` | Cliente / Parceiro | — |
 | `GET` | `/tickets/:id` | Cliente (próprio) / Parceiro | — |
 | `PATCH` | `/tickets/:id/status` | Cliente (cancelar) / Parceiro | `ticket.status_changed` |
 
-### Máquina de estados do ticket
-
-```
-[pending] → accepted → in_progress → completed
-     ↓           ↓           ↓
-  cancelled   cancelled   cancelled
-```
+Todos os endpoints requerem `Authorization: Bearer <token>` (JWT).
 
 ---
 
-## 4. Como testar
+## 7. Como Executar (Docker Compose)
 
-### 4.1 Pré-requisitos
+### Pré-requisitos
 
-- Node.js 18+
-- Docker (para o RabbitMQ)
-- PostgreSQL acessível (já configurado via Supabase no `.env`)
+- Docker Desktop instalado e rodando
+- Arquivo `Backend/.env` configurado (copiar de `Backend/.env.example`)
 
-### 4.2 Passo a passo
-
-#### Passo 1 — Subir o RabbitMQ
+### Subir tudo com um único comando
 
 ```bash
-# Na raiz do projeto (onde está o docker-compose.yml)
-docker compose up -d
+# Na raiz do projeto
+docker compose up --build
 ```
 
-Aguardar ~10 segundos. Verifique o painel em: **http://localhost:15672**  
-Login: `admin` / Senha: `admin123`
-
-#### Passo 2 — Executar a migration do banco
-
-No Supabase (ou no seu PostgreSQL), execute o arquivo:
+Isso sobe **RabbitMQ + Backend** juntos. Aguardar ~15 segundos até ver no terminal:
 
 ```
-Backend/database/002_tickets.sql
+chamados-rabbitmq  | Server startup complete
+chamados-backend   | Backend running on port 3000
+chamados-backend   | [RabbitMQ] Conectado com sucesso.
+chamados-backend   | [MOM] Consumer registrado: queue="ticket_created_queue"
+chamados-backend   | [MOM] Consumer registrado: queue="ticket_status_changed_queue"
+chamados-backend   | [MOM] Consumers iniciados com sucesso.
 ```
 
-Você pode rodar via **SQL Editor do Supabase** colando o conteúdo do arquivo.
+### URLs disponíveis
 
-#### Passo 3 — Iniciar o backend
+| Serviço | URL |
+|---|---|
+| API REST | http://localhost:3000 |
+| Swagger (documentação interativa) | http://localhost:3000/docs |
+| RabbitMQ Management UI | http://localhost:15672 |
+
+**Login no RabbitMQ UI:** usuário `guest` / senha `guest`
+
+### Parar os serviços
 
 ```bash
+docker compose down          # para e remove containers (mantém dados)
+docker compose down -v       # para, remove containers e apaga volumes
+```
+
+### Rodar o backend localmente (sem Docker)
+
+```bash
+# 1. Suba apenas o RabbitMQ
+docker compose up rabbitmq -d
+
+# 2. Em outro terminal
 cd Backend
 npm run dev
 ```
 
-Você verá no terminal:
-```
-Backend running on port 3000
-[RabbitMQ] Conectado com sucesso.
-[MOM] Consumer registrado: queue="ticket_created_queue" routingKey="ticket.created"
-[MOM] Consumer registrado: queue="ticket_status_changed_queue" routingKey="ticket.status_changed"
-[MOM] Consumers iniciados com sucesso.
-```
+---
 
-#### Passo 4 — Testar via Postman / Swagger
+## 8. Roteiro de Teste (Postman ou Swagger)
 
-Acesse o Swagger: **http://localhost:3000/docs**
+### Fluxo completo — do chamado à conclusão
 
-**Fluxo completo de teste:**
-
-**1. Registrar um cliente:**
+**1. Registrar cliente**
 ```http
 POST /auth/register
 {
@@ -214,9 +265,9 @@ POST /auth/register
   "password": "Senha1234"
 }
 ```
-Salve o `token` retornado.
+Salve o campo `token`.
 
-**2. Registrar um parceiro:**
+**2. Registrar parceiro**
 ```http
 POST /auth/register
 {
@@ -228,12 +279,12 @@ POST /auth/register
   "specialties": ["Elétrica", "Hidráulica"]
 }
 ```
-Salve o `token` retornado.
+Salve o campo `token`.
 
-**3. Cliente cria um chamado** (use o token do cliente):
+**3. Cliente abre chamado** *(token do cliente no header)*
 ```http
 POST /tickets
-Authorization: Bearer <token-do-cliente>
+Authorization: Bearer <token-cliente>
 {
   "specialty": "Elétrica",
   "title": "Tomada com faísca na sala",
@@ -241,84 +292,103 @@ Authorization: Bearer <token-do-cliente>
   "addressText": "Rua das Flores, 123 – BH/MG"
 }
 ```
-**→ Observe no terminal do backend:** mensagem `[MOM][PUBLISH] ticket.created` seguida de `[MOM][CONSUME][ticket.created]`
+Salve o `id` do ticket retornado.
 
-**4. Parceiro lista chamados pendentes** (use o token do parceiro):
+**Evidência no terminal:**
+```
+[MOM][PUBLISH] ticket.created { ticketId: "...", specialty: "Elétrica", ... }
+[MOM][CONSUME][ticket.created] Novo chamado #... | Especialidade: "Elétrica"
+```
+
+**4. Parceiro lista chamados pendentes** *(token do parceiro)*
 ```http
 GET /tickets?pending=true
-Authorization: Bearer <token-do-parceiro>
+Authorization: Bearer <token-parceiro>
 ```
 
-**5. Parceiro aceita o chamado** (use o `id` retornado no passo 3):
+**5. Parceiro aceita o chamado**
 ```http
 PATCH /tickets/<id>/status
-Authorization: Bearer <token-do-parceiro>
-{
-  "status": "accepted"
-}
+Authorization: Bearer <token-parceiro>
+{ "status": "accepted" }
 ```
-**→ Observe no terminal:** `[MOM][PUBLISH] ticket.status_changed` + `[MOM][CONSUME][ticket.status_changed] pending → accepted`
 
-**6. Parceiro inicia e conclui:**
+**Evidência no terminal:**
+```
+[MOM][PUBLISH] ticket.status_changed { previousStatus: "pending", newStatus: "accepted" }
+[MOM][CONSUME][ticket.status_changed] Chamado #... | pending → accepted
+```
+
+**6. Parceiro inicia e conclui**
 ```http
 PATCH /tickets/<id>/status  →  { "status": "in_progress" }
 PATCH /tickets/<id>/status  →  { "status": "completed" }
 ```
-Cada PATCH gera um novo evento no terminal.
+Cada requisição gera um novo par PUBLISH + CONSUME no terminal.
 
-#### Passo 5 — Evidência no RabbitMQ Management UI
+### Evidência visual no RabbitMQ UI
 
-Acesse **http://localhost:15672** → aba **Queues**.  
-As filas `ticket_created_queue` e `ticket_status_changed_queue` devem aparecer com contadores de mensagens.
+Acesse **http://localhost:15672** → aba **Queues and Streams**.  
+As filas `ticket_created_queue` e `ticket_status_changed_queue` aparecem com:
+- `Ready`: mensagens aguardando consumo
+- `Unacked`: mensagens em processamento
+- Gráfico de throughput em tempo real
 
 ---
 
-## 5. Estrutura de arquivos adicionados na Sprint 2
+## 9. Estrutura de Arquivos (Sprint 2)
 
 ```
 Projeto_LAMD_2026_1/
-├── docker-compose.yml                          ← RabbitMQ (novo)
-├── SPRINT2_RELATORIO.md                        ← Este arquivo
+├── docker-compose.yml              ← RabbitMQ + Backend (atualizado)
+├── SPRINT2_RELATORIO.md            ← Este documento
+├── .gitignore                      ← Atualizado (.env.example não ignorado)
 └── Backend/
-    ├── .env.example                            ← Variáveis de ambiente documentadas (novo)
+    ├── Dockerfile                  ← Imagem do backend (novo)
+    ├── .dockerignore               ← Exclui node_modules e .env da imagem (novo)
+    ├── .env.example                ← Template de variáveis de ambiente (novo)
     ├── database/
-    │   └── 002_tickets.sql                     ← Migration da tabela tickets (novo)
+    │   └── 002_tickets.sql         ← Migration da tabela tickets (novo)
     └── src/
         ├── config/
-        │   └── rabbitmq.js                     ← Conexão e canais RabbitMQ (novo)
+        │   └── rabbitmq.js         ← Conexão AMQP, exchange, canais (novo)
         ├── messaging/
-        │   ├── publisher.js                    ← Produtor de eventos (novo)
-        │   └── consumer.js                     ← Consumidor de eventos (novo)
+        │   ├── publisher.js        ← publishEvent() — produtor (novo)
+        │   └── consumer.js         ← startConsumers() — consumidor (novo)
         ├── modules/
         │   └── tickets/
-        │       ├── tickets.routes.js           ← Rotas REST (novo)
-        │       ├── tickets.controller.js       ← Controller (novo)
-        │       ├── tickets.service.js          ← Lógica + disparo de eventos (novo)
-        │       └── tickets.store.js            ← Queries PostgreSQL (novo)
-        ├── routes/index.js                     ← Atualizado: adicionado /tickets
-        └── server.js                           ← Atualizado: inicia consumers
+        │       ├── tickets.routes.js     ← Rotas REST (novo)
+        │       ├── tickets.controller.js ← Controller HTTP (novo)
+        │       ├── tickets.service.js    ← Lógica + disparo de eventos (novo)
+        │       └── tickets.store.js      ← Queries PostgreSQL (novo)
+        ├── routes/index.js         ← Atualizado: adicionado /tickets
+        └── server.js               ← Atualizado: inicia consumers no boot
 ```
 
 ---
 
-## 6. Relatório de Integração — Decisões de Design
+## 10. Relatório de Integração — Decisões de Design
 
 ### Escolha do MOM: RabbitMQ
 
-O RabbitMQ foi escolhido por ser o broker de mensagens mais citado na literatura de integração (Hohpe & Woolf, 2003) e por oferecer uma Management UI que facilita a **evidência visual** do funcionamento — fundamental para a avaliação acadêmica. Alternativas como Redis Pub/Sub foram descartadas por não oferecerem persistência de mensagens por padrão, e alternativas como Kafka foram consideradas desnecessárias para o volume de dados desta aplicação.
+O RabbitMQ foi escolhido por ser o broker de mensagens mais consolidado na literatura de integração empresarial (Hohpe & Woolf, 2003) e por oferecer uma Management UI que permite **evidenciar visualmente o funcionamento** das filas — essencial para o contexto acadêmico desta entrega. Alternativas como Redis Pub/Sub foram descartadas por não garantirem persistência de mensagens por padrão. Apache Kafka foi considerado desnecessário para o volume de dados e a complexidade desta etapa do projeto.
 
-### Padrão utilizado: Topic Exchange
+### Padrão: Topic Exchange (Publish/Subscribe com roteamento)
 
-O padrão **Publish/Subscribe com Topic Exchange** permite que um produtor publique um evento com uma routing key (ex.: `ticket.created`) e múltiplos consumidores se inscrevam em padrões de chave (ex.: `ticket.*`). Isso desacopla produtores de consumidores — o serviço de tickets não sabe quantos consumidores existem, nem o que eles fazem com o evento.
+A escolha do **Topic Exchange** em vez de um Direct Exchange simples foi deliberada: ele permite que consumidores futuros se inscrevam em padrões de chave (ex.: `ticket.*`) sem que os produtores precisem ser alterados. Isso implementa o princípio de **desacoplamento** descrito por Richardson (2018) para arquiteturas orientadas a eventos — o serviço de tickets não conhece nem se importa com quantos consumidores existem.
 
-### Desafios encontrados
+### Docker Compose: hostname vs. localhost
 
-1. **Resiliência na inicialização:** o backend poderia falhar se o RabbitMQ não estivesse pronto. Solução: o `server.js` trata o erro de conexão com um `try/catch` e exibe um aviso, permitindo que o backend suba normalmente sem o MOM (degradado, sem eventos).
-2. **Canais separados para publisher e consumer:** o amqplib recomenda não compartilhar canais entre produção e consumo. A solução foi criar um canal dedicado para cada finalidade: `getPublisherChannel()` (singleton reutilizado) e `createConsumerChannel()` (um por sessão de consumo).
-3. **Idempotência do exchange:** o `assertExchange()` é chamado tanto no publisher quanto no consumer para garantir que o exchange exista antes de qualquer operação, independentemente da ordem de inicialização.
+Quando o backend roda dentro de um container Docker, ele não pode conectar ao RabbitMQ via `localhost` — precisa usar o **nome do serviço** definido no Compose (`rabbitmq`). A solução adotada foi usar `env_file` para carregar todas as variáveis do `.env` local e sobrescrever apenas `RABBITMQ_URL` com o hostname correto na seção `environment` do Compose. Dessa forma, o mesmo `.env` funciona tanto para desenvolvimento local quanto para o ambiente containerizado.
 
-### Referências
+### Resiliência: backend sobe mesmo sem RabbitMQ
 
-- HOHPE, Gregor; WOOLF, Bobby. *Enterprise Integration Patterns*. Addison-Wesley, 2003.
-- RICHARDSON, Chris. *Microservices Patterns*. Manning, 2018.
-- COULOURIS, George et al. *Distributed Systems: concepts and design*. 5. ed. Addison-Wesley, 2011.
+O `server.js` envolve o `startConsumers()` em `try/catch`: se o RabbitMQ não estiver disponível no momento do boot, o backend sobe em **modo degradado** (sem eventos) e exibe um aviso no log. Isso evita que uma falha no broker derrube toda a API REST.
+
+---
+
+## Referências
+
+- HOHPE, Gregor; WOOLF, Bobby. *Enterprise Integration Patterns: designing, building, and deploying messaging solutions*. Boston: Addison-Wesley, 2003.
+- RICHARDSON, Chris. *Microservices Patterns: with examples in Java*. Shelter Island: Manning, 2018.
+- COULOURIS, George et al. *Distributed Systems: concepts and design*. 5. ed. Boston: Addison-Wesley, 2011.
