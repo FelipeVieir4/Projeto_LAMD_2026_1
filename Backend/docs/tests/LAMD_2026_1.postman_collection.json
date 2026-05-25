@@ -519,6 +519,43 @@
             }
           }
         }
+      ],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var partnerToken = pm.collectionVariables.get(\"partnerToken\");",
+              "if (partnerToken && partnerToken.length > 20) return;",
+              "",
+              "var baseUrl  = pm.collectionVariables.get(\"baseUrl\") || \"http://localhost:3000/api/v1\";",
+              "var password = pm.collectionVariables.get(\"defaultPassword\") || \"SenhaForte123\";",
+              "var pEmail   = \"auto.parceiro.\" + Date.now() + \"@lamd.local\";",
+              "pm.collectionVariables.set(\"partnerEmail\", pEmail);",
+              "",
+              "pm.sendRequest({",
+              "  url: baseUrl + \"/auth/register\",",
+              "  method: \"POST\",",
+              "  header: { \"Content-Type\": \"application/json\" },",
+              "  body: {",
+              "    mode: \"raw\",",
+              "    raw: JSON.stringify({",
+              "      program: \"partner\",",
+              "      companyName: \"Admin Auto LTDA\",",
+              "      document: \"99.888.777/0001-66\",",
+              "      email: pEmail,",
+              "      password: password,",
+              "      specialties: [\"eletrica\"]",
+              "    })",
+              "  }",
+              "}, function (err, res) {",
+              "  var d = res.json();",
+              "  if (d && d.token) pm.collectionVariables.set(\"partnerToken\", d.token);",
+              "});"
+            ]
+          }
+        }
       ]
     },
     {
