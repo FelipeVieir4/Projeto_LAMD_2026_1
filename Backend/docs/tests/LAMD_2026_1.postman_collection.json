@@ -12,15 +12,14 @@
         "type": "text/javascript",
         "exec": [
           "(function () {",
-          "  if (pm.collectionVariables.get('runInitialized') === 'true') return;",
           "  var runId = Date.now().toString();",
-          "  pm.collectionVariables.set('runId', runId);",
-          "  pm.collectionVariables.set('customerEmail', 'cliente.' + runId + '@lamd.local');",
-          "  pm.collectionVariables.set('partnerEmail', 'parceiro.' + runId + '@lamd.local');",
-          "  pm.collectionVariables.set('specialtyId', '');",
-          "  pm.collectionVariables.set('ticketId', '');",
-          "  // Nao limpa tokens — podem ser reaproveitados de uma execucao anterior",
-          "  pm.collectionVariables.set('runInitialized', 'true');",
+          "  pm.collectionVariables.set(\"runId\", runId);",
+          "  pm.collectionVariables.set(\"customerEmail\", \"cliente.\" + runId + \"@lamd.local\");",
+          "  pm.collectionVariables.set(\"partnerEmail\",  \"parceiro.\" + runId + \"@lamd.local\");",
+          "  pm.collectionVariables.set(\"customerToken\", \"\");",
+          "  pm.collectionVariables.set(\"partnerToken\",  \"\");",
+          "  pm.collectionVariables.set(\"specialtyId\", \"\");",
+          "  pm.collectionVariables.set(\"ticketId\", \"\");",
           "})();"
         ]
       }
@@ -343,11 +342,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "x-admin-key",
-                "value": "{{adminApiKey}}",
-                "type": "text"
               }
             ],
             "body": {
@@ -388,11 +382,6 @@
               {
                 "key": "x-admin-key",
                 "value": "{{adminApiKey}}"
-              },
-              {
-                "key": "x-admin-key",
-                "value": "{{adminApiKey}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -439,11 +428,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "x-admin-key",
-                "value": "{{adminApiKey}}",
-                "type": "text"
               }
             ],
             "body": {
@@ -484,11 +468,6 @@
               {
                 "key": "x-admin-key",
                 "value": "{{adminApiKey}}"
-              },
-              {
-                "key": "x-admin-key",
-                "value": "{{adminApiKey}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -899,8 +878,7 @@
                   "});",
                   "",
                   "// Limpa apenas o ticket — tokens sao mantidos para proximas execucoes",
-                  "pm.collectionVariables.set('ticketId', '');",
-                  "pm.collectionVariables.set('runInitialized', 'false');"
+                  "pm.collectionVariables.set('ticketId', '');"
                 ]
               }
             }
