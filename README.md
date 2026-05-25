@@ -1,46 +1,73 @@
-# Projeto_LAMD_2026_1
+# Projeto LAMD 2026/1
 
-App de atendimento de chamados com roteamento por região.
+Plataforma de atendimento de chamados técnicos domiciliares com roteamento por região.
 
-## Ideia do projeto
+## Estrutura
 
-O sistema terá três partes iniciais:
+```
+.
+├── Backend/          # API REST (Node.js + Express + PostgreSQL + RabbitMQ)
+├── App/              # App do cliente (em desenvolvimento)
+├── App_parceiro/     # App do parceiro/técnico (em desenvolvimento)
+└── reports/          # Relatórios de sprint
+```
 
-- Backend: API, autenticação, regras de negócio, catálogo de serviços e distribuição dos chamados.
-- App: aplicativo do cliente final para abrir tickets e acompanhar o atendimento.
-- App_parceiro: aplicativo do prestador/técnico para receber notificações e aceitar chamados da sua região.
+## Como executar
 
-## Fluxo principal
+### Com Docker (recomendado)
 
-1. O usuário abre um chamado informando CEP, bairro ou localização no mapa.
-2. O backend identifica a região do ticket.
-3. Técnicos parceiros associados a essa região recebem a notificação.
-4. Um técnico aceita o chamado e inicia o atendimento.
-5. O usuário acompanha o status até a conclusão.
+```bash
+# 1. Configure as variáveis de ambiente
+cp Backend/.env.example Backend/.env
+# Edite Backend/.env com suas credenciais do banco de dados
 
-## MVP sugerido
+# 2. Suba tudo
+docker compose up --build
+```
 
-- Cadastro de usuário e parceiro.
-- Login com perfis diferentes.
-- Abertura de chamado com endereço, CEP ou geolocalização.
-- Catálogo de serviços tabelados, por exemplo:
-	- instalar espelho até 1m ou 2m
-	- desentupir pia
-	- desentupir vaso
-	- instalação e pequenos reparos
-- Associação de técnico por região.
-- Notificação em tempo real para parceiros.
-- Status do chamado: aberto, em análise, aceito, em andamento, concluído e cancelado.
+Aguarde as mensagens de confirmação no terminal:
 
-## Estrutura inicial
+```
+chamados-backend   | Backend running on port 3000
+chamados-backend   | [RabbitMQ] Conectado com sucesso.
+chamados-backend   | [MOM] Consumer registrado: queue="ticket_created_queue"
+chamados-backend   | [MOM] Consumer registrado: queue="ticket_status_changed_queue"
+```
 
-- [Backend](Backend)
-- [App](App)
-- [App_parceiro](App_parceiro)
+| Serviço | URL |
+|---------|-----|
+| API | `http://localhost:3000/api/v1` |
+| Swagger (docs interativas) | `http://localhost:3000/api/v1/docs` |
+| RabbitMQ Management UI | `http://localhost:15672` (guest / guest) |
+
+Para parar:
+
+```bash
+docker compose down        # para e remove containers (mantém dados)
+docker compose down -v     # também apaga os volumes
+```
+
+### Localmente (sem Docker)
+
+```bash
+# 1. Suba apenas o RabbitMQ
+docker compose up rabbitmq -d
+
+# 2. Configure e inicie o backend
+cp Backend/.env.example Backend/.env
+cd Backend
+npm install
+npm run dev
+```
 
 ## Documentação técnica
 
-- Diagramas de arquitetura e fluxo: [Backend/docs/diagrams.md](Backend/docs/diagrams.md)
-- Schema de dados: [Backend/docs/database-schema.md](Backend/docs/database-schema.md)
-- Script SQL inicial: [Backend/docs/sql/001_initial_schema.sql](Backend/docs/sql/001_initial_schema.sql)
+- [Diagramas de arquitetura](Backend/docs/diagrams.md)
+- [Schema do banco de dados](Backend/docs/database-schema.md)
+- [SQL — schema inicial](Backend/docs/sql/001_initial_schema.sql)
+- [SQL — tickets](Backend/docs/sql/002_tickets.sql)
 
+## Relatórios de sprint
+
+- [Sprint 1 — Auth, Especialidades e Infraestrutura](reports/SPRINT1_RELATORIO.md)
+- [Sprint 2 — Integração com RabbitMQ (MOM)](reports/SPRINT2_RELATORIO.md)

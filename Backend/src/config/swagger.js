@@ -1,4 +1,4 @@
-export const swaggerDocument = {
+export let swaggerDocument = {
   openapi: '3.0.0',
   info: {
     title: 'Projeto LAMD 2026 1 API',
@@ -7,12 +7,18 @@ export const swaggerDocument = {
   },
   servers: [
     {
-      url: 'https://friendly-meme-rvw764xxxr7fwjxq-3000.app.github.dev', //via code spaces
-      description: 'Servidor de desenvolvimento (GitHub Codespaces)'
-    },
-    {
       url: 'http://localhost:3000',
       description: 'Servidor local'
+    },
+    {
+      url: '{baseUrl}',
+      description: 'Servidor customizado',
+      variables: {
+        baseUrl: {
+          default: 'http://localhost:3000',
+          description: 'URL base do servidor'
+        }
+      }
     }
   ],
   components: {
@@ -30,7 +36,7 @@ export const swaggerDocument = {
     }
   },
   paths: {
-    '/health': {
+    '/api/v1/health': {
       get: {
         tags: ['Health'],
         summary: 'Verifica se a API está online',
@@ -50,6 +56,10 @@ export const swaggerDocument = {
                       type: 'string',
                       example: 'ok'
                     },
+                    rabbitmq: {
+                      type: 'string',
+                      example: 'ok'
+                    },
                     timestamp: {
                       type: 'string',
                       example: '2026-05-05T12:00:00.000Z'
@@ -62,7 +72,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/auth/register': {
+    '/api/v1/auth/register': {
       post: {
         tags: ['Auth'],
         summary: 'Cria uma conta de cliente ou parceiro',
@@ -153,7 +163,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/auth/login': {
+    '/api/v1/auth/login': {
       post: {
         tags: ['Auth'],
         summary: 'Autentica uma conta e retorna JWT',
@@ -190,7 +200,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/auth/me': {
+    '/api/v1/auth/me': {
       get: {
         tags: ['Auth'],
         summary: 'Retorna a conta autenticada',
@@ -206,7 +216,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/admin/specialties': {
+    '/api/v1/admin/specialties': {
       get: {
         tags: ['Admin'],
         summary: 'Lista especialidades cadastradas',
@@ -278,7 +288,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/tickets': {
+    '/api/v1/tickets': {
       post: {
         tags: ['Tickets'],
         summary: 'Abre um novo chamado (apenas clientes)',
@@ -319,7 +329,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/tickets/{id}': {
+    '/api/v1/tickets/{id}': {
       get: {
         tags: ['Tickets'],
         summary: 'Retorna detalhes de um chamado',
@@ -333,7 +343,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/tickets/{id}/status': {
+    '/api/v1/tickets/{id}/status': {
       patch: {
         tags: ['Tickets'],
         summary: 'Atualiza o status de um chamado',
@@ -366,7 +376,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/admin/specialties/{id}': {
+    '/api/v1/admin/specialties/{id}': {
       put: {
         tags: ['Admin'],
         summary: 'Atualiza uma especialidade',
@@ -450,3 +460,4 @@ export const swaggerDocument = {
     }
   }
 };
+

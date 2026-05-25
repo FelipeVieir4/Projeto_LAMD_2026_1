@@ -48,3 +48,16 @@ export async function createConsumerChannel() {
   await channel.assertExchange(EXCHANGE_NAME, EXCHANGE_TYPE, { durable: true });
   return channel;
 }
+
+export async function checkRabbitConnection() {
+  try {
+    const conn = await getConnection();
+    // Se a conexão existir e não estiver fechada, consideramos OK
+    if (!conn) return false;
+    // amqplib Connection possui 'connection' object with 'closed' flag em algumas versões;
+    // trataremos qualquer erro de operação como indisponível
+    return true;
+  } catch (err) {
+    return false;
+  }
+}

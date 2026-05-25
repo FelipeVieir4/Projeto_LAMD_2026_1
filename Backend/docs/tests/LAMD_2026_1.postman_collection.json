@@ -396,7 +396,7 @@
               "  return; // tokens validos, nao precisa fazer nada",
               "}",
               "",
-              "var baseUrl  = pm.collectionVariables.get('baseUrl')  || 'http://localhost:3000';",
+              "var baseUrl  = pm.collectionVariables.get('baseUrl')  || 'http://localhost:3000/api/v1';",
               "var password = pm.collectionVariables.get('defaultPassword') || 'SenhaForte123';",
               "var ts       = Date.now().toString();",
               "var cEmail   = 'auto.cliente.'  + ts + '@lamd.local';",
@@ -707,7 +707,7 @@
     }
   ],
   "variable": [
-    {"key": "baseUrl", "value": "http://localhost:3000"},
+    {"key": "baseUrl", "value": "http://localhost:3000/api/v1"},
     {"key": "defaultPassword", "value": "SenhaForte123"},
     {"key": "adminApiKey", "value": "troque_esta_chave_admin"},
     {"key": "customerEmail", "value": ""},

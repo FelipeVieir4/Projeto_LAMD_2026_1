@@ -9,6 +9,6 @@ app.use(cors);
 app.options('*', cors);
 
 app.use(express.json());
-app.use(routes);
+app.use('/api/v1', routes);
 
 export default app;
