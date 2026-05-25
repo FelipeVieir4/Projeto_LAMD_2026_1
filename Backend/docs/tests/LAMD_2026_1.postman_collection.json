@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "6fceebf2-3a3d-4f1b-9f93-d71d47de4a2c",
     "name": "LAMD 2026.1 - Backend API",
-    "description": "Colecao de testes da API. Sprint 1: health, auth e admin specialties. Sprint 2: tickets (MOM/RabbitMQ).",
+    "description": "Colecao completa Sprint 1 + Sprint 2. Execute em ordem: os tokens e IDs sao salvos automaticamente entre as requisicoes.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -12,26 +12,16 @@
         "type": "text/javascript",
         "exec": [
           "(function () {",
-          "  var isInitialized = pm.collectionVariables.get('runInitialized') === 'true';",
-          "  var baseUrl = pm.collectionVariables.get('baseUrl') || 'http://localhost:3000';",
-          "  var defaultPassword = pm.collectionVariables.get('defaultPassword') || 'SenhaForte123';",
-          "  var adminApiKey = pm.collectionVariables.get('adminApiKey') || 'troque_esta_chave_admin';",
-          "",
-          "  pm.collectionVariables.set('baseUrl', baseUrl);",
-          "  pm.collectionVariables.set('defaultPassword', defaultPassword);",
-          "  pm.collectionVariables.set('adminApiKey', adminApiKey);",
-          "",
-          "  if (!isInitialized) {",
-          "    var runId = Date.now().toString();",
-          "    pm.collectionVariables.set('runId', runId);",
-          "    pm.collectionVariables.set('customerEmail', 'cliente.' + runId + '@lamd.local');",
-          "    pm.collectionVariables.set('partnerEmail', 'parceiro.' + runId + '@lamd.local');",
-          "    pm.collectionVariables.set('customerToken', '');",
-          "    pm.collectionVariables.set('partnerToken', '');",
-          "    pm.collectionVariables.set('specialtyId', '');",
-          "    pm.collectionVariables.set('ticketId', '');",
-          "    pm.collectionVariables.set('runInitialized', 'true');",
-          "  }",
+          "  if (pm.collectionVariables.get('runInitialized') === 'true') return;",
+          "  var runId = Date.now().toString();",
+          "  pm.collectionVariables.set('runId', runId);",
+          "  pm.collectionVariables.set('customerEmail', 'cliente.' + runId + '@lamd.local');",
+          "  pm.collectionVariables.set('partnerEmail', 'parceiro.' + runId + '@lamd.local');",
+          "  pm.collectionVariables.set('customerToken', '');",
+          "  pm.collectionVariables.set('partnerToken', '');",
+          "  pm.collectionVariables.set('specialtyId', '');",
+          "  pm.collectionVariables.set('ticketId', '');",
+          "  pm.collectionVariables.set('runInitialized', 'true');",
           "})();"
         ]
       }
@@ -39,7 +29,7 @@
   ],
   "item": [
     {
-      "name": "Health",
+      "name": "01 - Health",
       "item": [
         {
           "name": "GET /health",
@@ -49,16 +39,12 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Response has status, database and timestamp', function () {",
-                  "  var data = pm.response.json();",
-                  "  pm.expect(data).to.have.property('status');",
-                  "  pm.expect(data).to.have.property('database');",
-                  "  pm.expect(['ok', 'unavailable']).to.include(data.database);",
-                  "  pm.expect(data).to.have.property('timestamp');",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('API e banco OK', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d.status).to.eql('ok');",
+                  "  pm.expect(['ok','unavailable']).to.include(d.database);",
+                  "  pm.expect(d).to.have.property('timestamp');",
                   "});"
                 ]
               }
@@ -77,24 +63,24 @@
       ]
     },
     {
-      "name": "Auth",
+      "name": "02 - Auth",
       "item": [
         {
-          "name": "POST /auth/register - customer",
+          "name": "POST /auth/register - cliente",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 201', function () {",
-                  "  pm.response.to.have.status(201);",
-                  "});",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
                   "",
-                  "pm.test('Response has user and token', function () {",
-                  "  var data = pm.response.json();",
-                  "  pm.expect(data).to.have.property('user');",
-                  "  pm.expect(data).to.have.property('token');",
+                  "pm.test('Token do cliente salvo automaticamente', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d).to.have.property('token');",
+                  "  pm.expect(d.user.program).to.eql('customer');",
+                  "  pm.collectionVariables.set('customerToken', d.token);",
+                  "  pm.expect(pm.collectionVariables.get('customerToken')).to.not.be.empty;",
                   "});"
                 ]
               }
@@ -115,21 +101,21 @@
           }
         },
         {
-          "name": "POST /auth/register - partner",
+          "name": "POST /auth/register - parceiro",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 201', function () {",
-                  "  pm.response.to.have.status(201);",
-                  "});",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
                   "",
-                  "pm.test('Response has partner user and token', function () {",
-                  "  var data = pm.response.json();",
-                  "  pm.expect(data.user.program).to.eql('partner');",
-                  "  pm.expect(data).to.have.property('token');",
+                  "pm.test('Token do parceiro salvo automaticamente', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d).to.have.property('token');",
+                  "  pm.expect(d.user.program).to.eql('partner');",
+                  "  pm.collectionVariables.set('partnerToken', d.token);",
+                  "  pm.expect(pm.collectionVariables.get('partnerToken')).to.not.be.empty;",
                   "});"
                 ]
               }
@@ -140,7 +126,7 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"program\": \"partner\",\n  \"companyName\": \"Parceiro Teste LTDA\",\n  \"document\": \"12.345.678/0001-90\",\n  \"email\": \"{{partnerEmail}}\",\n  \"password\": \"{{defaultPassword}}\",\n  \"phone\": \"+55 11 98888-7777\",\n  \"bio\": \"Atendimento geral\",\n  \"specialties\": [\"eletrica\", \"hidraulica\"]\n}"
+              "raw": "{\n  \"program\": \"partner\",\n  \"companyName\": \"Parceiro Teste LTDA\",\n  \"document\": \"12.345.678/0001-90\",\n  \"email\": \"{{partnerEmail}}\",\n  \"password\": \"{{defaultPassword}}\",\n  \"phone\": \"+55 11 98888-7777\",\n  \"bio\": \"Atendimento de eletrica e hidraulica\",\n  \"specialties\": [\"eletrica\", \"hidraulica\"]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/register",
@@ -150,24 +136,20 @@
           }
         },
         {
-          "name": "POST /auth/login - customer",
+          "name": "POST /auth/login - cliente (renova token)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
                   "",
-                  "var data = pm.response.json();",
-                  "if (data.token) {",
-                  "  pm.collectionVariables.set('customerToken', data.token);",
-                  "}",
-                  "",
-                  "pm.test('Customer token saved', function () {",
-                  "  pm.expect(pm.collectionVariables.get('customerToken')).to.be.a('string').and.not.empty;",
+                  "pm.test('Token do cliente renovado', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d).to.have.property('token');",
+                  "  pm.collectionVariables.set('customerToken', d.token);",
+                  "  pm.expect(pm.collectionVariables.get('customerToken')).to.not.be.empty;",
                   "});"
                 ]
               }
@@ -188,24 +170,20 @@
           }
         },
         {
-          "name": "POST /auth/login - partner",
+          "name": "POST /auth/login - parceiro (renova token)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
                   "",
-                  "var data = pm.response.json();",
-                  "if (data.token) {",
-                  "  pm.collectionVariables.set('partnerToken', data.token);",
-                  "}",
-                  "",
-                  "pm.test('Partner token saved', function () {",
-                  "  pm.expect(pm.collectionVariables.get('partnerToken')).to.be.a('string').and.not.empty;",
+                  "pm.test('Token do parceiro renovado', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d).to.have.property('token');",
+                  "  pm.collectionVariables.set('partnerToken', d.token);",
+                  "  pm.expect(pm.collectionVariables.get('partnerToken')).to.not.be.empty;",
                   "});"
                 ]
               }
@@ -226,20 +204,18 @@
           }
         },
         {
-          "name": "GET /auth/me - customer",
+          "name": "GET /auth/me - valida token do cliente",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Authenticated user is customer', function () {",
-                  "  var data = pm.response.json();",
-                  "  pm.expect(data.user.program).to.eql('customer');",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Usuario autenticado e cliente', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d.user.program).to.eql('customer');",
+                  "  pm.expect(d.user.email).to.eql(pm.collectionVariables.get('customerEmail'));",
                   "});"
                 ]
               }
@@ -254,27 +230,20 @@
               "path": ["auth", "me"]
             }
           }
-        }
-      ]
-    },
-    {
-      "name": "Admin - Specialties",
-      "item": [
+        },
         {
-          "name": "GET /admin/specialties",
+          "name": "GET /auth/me - valida token do parceiro",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Response has specialties array', function () {",
-                  "  var data = pm.response.json();",
-                  "  pm.expect(data.specialties).to.be.an('array');",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Usuario autenticado e parceiro', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d.user.program).to.eql('partner');",
+                  "  pm.expect(d.user.email).to.eql(pm.collectionVariables.get('partnerEmail'));",
                   "});"
                 ]
               }
@@ -282,37 +251,33 @@
           ],
           "request": {
             "method": "GET",
-            "header": [
-              {"key": "Authorization", "value": "Bearer {{partnerToken}}"},
-              {"key": "x-admin-key", "value": "{{adminApiKey}}"}
-            ],
+            "header": [{"key": "Authorization", "value": "Bearer {{partnerToken}}"}],
             "url": {
-              "raw": "{{baseUrl}}/admin/specialties?includeInactive=true",
+              "raw": "{{baseUrl}}/auth/me",
               "host": ["{{baseUrl}}"],
-              "path": ["admin", "specialties"],
-              "query": [{"key": "includeInactive", "value": "true"}]
+              "path": ["auth", "me"]
             }
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "03 - Admin - Especialidades",
+      "item": [
         {
-          "name": "POST /admin/specialties",
+          "name": "POST /admin/specialties - cria especialidade",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 201', function () {",
-                  "  pm.response.to.have.status(201);",
-                  "});",
-                  "",
-                  "var data = pm.response.json();",
-                  "if (data.specialty && data.specialty.id) {",
-                  "  pm.collectionVariables.set('specialtyId', data.specialty.id);",
-                  "}",
-                  "",
-                  "pm.test('Specialty id saved', function () {",
-                  "  pm.expect(pm.collectionVariables.get('specialtyId')).to.be.a('string').and.not.empty;",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('ID da especialidade salvo', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d.specialty).to.have.property('id');",
+                  "  pm.collectionVariables.set('specialtyId', d.specialty.id);",
+                  "  pm.expect(pm.collectionVariables.get('specialtyId')).to.not.be.empty;",
                   "});"
                 ]
               }
@@ -337,20 +302,49 @@
           }
         },
         {
-          "name": "PUT /admin/specialties/:id",
+          "name": "GET /admin/specialties - lista especialidades",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Specialty name updated', function () {",
-                  "  var data = pm.response.json();",
-                  "  pm.expect(data.specialty.name).to.eql('Pintura Residencial');",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Retorna array de especialidades', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d.specialties).to.be.an('array');",
+                  "  pm.expect(d.specialties.length).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{partnerToken}}"},
+              {"key": "x-admin-key", "value": "{{adminApiKey}}"}
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/specialties?includeInactive=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "specialties"],
+              "query": [{"key": "includeInactive", "value": "true"}]
+            }
+          }
+        },
+        {
+          "name": "PUT /admin/specialties/:id - atualiza especialidade",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Nome atualizado para Pintura Residencial', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d.specialty.name).to.eql('Pintura Residencial');",
                   "});"
                 ]
               }
@@ -375,23 +369,18 @@
           }
         },
         {
-          "name": "DELETE /admin/specialties/:id",
+          "name": "DELETE /admin/specialties/:id - remove especialidade",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "  pm.response.to.have.status(200);",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('deleted true', () => {",
+                  "  pm.expect(pm.response.json().deleted).to.eql(true);",
                   "});",
-                  "",
-                  "pm.test('Delete flag true', function () {",
-                  "  var data = pm.response.json();",
-                  "  pm.expect(data.deleted).to.eql(true);",
-                  "});",
-                  "",
-                  "pm.collectionVariables.unset('specialtyId');"
+                  "pm.collectionVariables.set('specialtyId', '');"
                 ]
               }
             }
@@ -412,8 +401,8 @@
       ]
     },
     {
-      "name": "Tickets (Sprint 2 - MOM)",
-      "description": "Fluxo completo de chamados. Cada requisicao bem-sucedida publica um evento no RabbitMQ (ticket.created ou ticket.status_changed). Observe os logs do backend para ver os eventos sendo publicados e consumidos de forma assincrona.",
+      "name": "04 - Tickets (Sprint 2 - MOM)",
+      "description": "Fluxo completo de chamados. Cada PATCH de status publica evento ticket.status_changed no RabbitMQ. Observe o terminal do backend para ver os pares [PUBLISH] e [CONSUME] em tempo real.",
       "item": [
         {
           "name": "POST /tickets - cliente abre chamado",
@@ -423,28 +412,18 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 201', function () {",
-                  "  pm.response.to.have.status(201);",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "",
+                  "pm.test('Chamado criado com status pending e ticketId salvo', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d.success).to.eql(true);",
+                  "  pm.expect(d.data.status).to.eql('pending');",
+                  "  pm.expect(d.data.specialty).to.eql('Eletrica');",
+                  "  pm.expect(d.data.id).to.be.a('string').and.not.empty;",
+                  "  pm.collectionVariables.set('ticketId', d.data.id);",
                   "});",
                   "",
-                  "pm.test('Ticket criado com status pending', function () {",
-                  "  var data = pm.response.json();",
-                  "  pm.expect(data.success).to.eql(true);",
-                  "  pm.expect(data.data).to.have.property('id');",
-                  "  pm.expect(data.data.status).to.eql('pending');",
-                  "  pm.expect(data.data.specialty).to.eql('Eletrica');",
-                  "});",
-                  "",
-                  "var data = pm.response.json();",
-                  "if (data.data && data.data.id) {",
-                  "  pm.collectionVariables.set('ticketId', data.data.id);",
-                  "}",
-                  "",
-                  "pm.test('ticketId salvo na variavel', function () {",
-                  "  pm.expect(pm.collectionVariables.get('ticketId')).to.be.a('string').and.not.empty;",
-                  "});",
-                  "",
-                  "pm.test('[MOM] Evento ticket.created publicado (verificar log do backend)', function () {",
+                  "pm.test('[MOM] Verificar no terminal: [PUBLISH] ticket.created + [CONSUME] ticket.created', () => {",
                   "  pm.expect(true).to.eql(true);",
                   "});"
                 ]
@@ -476,22 +455,13 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Retorna lista de chamados do cliente', function () {",
-                  "  var data = pm.response.json();",
-                  "  pm.expect(data.success).to.eql(true);",
-                  "  pm.expect(data.data).to.be.an('array');",
-                  "  pm.expect(data.total).to.be.a('number');",
-                  "});",
-                  "",
-                  "pm.test('Chamado criado aparece na lista', function () {",
-                  "  var data = pm.response.json();",
-                  "  var ticketId = pm.collectionVariables.get('ticketId');",
-                  "  var found = data.data.some(function(t) { return t.id === ticketId; });",
-                  "  pm.expect(found).to.eql(true);",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Lista contem o chamado criado', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d.success).to.eql(true);",
+                  "  pm.expect(d.data).to.be.an('array');",
+                  "  var id = pm.collectionVariables.get('ticketId');",
+                  "  pm.expect(d.data.some(t => t.id === id)).to.eql(true);",
                   "});"
                 ]
               }
@@ -515,24 +485,16 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "  pm.response.to.have.status(200);",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Todos os chamados retornados sao pending', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d.success).to.eql(true);",
+                  "  d.data.forEach(t => pm.expect(t.status).to.eql('pending'));",
                   "});",
-                  "",
-                  "pm.test('Retorna chamados pendentes', function () {",
-                  "  var data = pm.response.json();",
-                  "  pm.expect(data.success).to.eql(true);",
-                  "  pm.expect(data.data).to.be.an('array');",
-                  "  data.data.forEach(function(t) {",
-                  "    pm.expect(t.status).to.eql('pending');",
-                  "  });",
-                  "});",
-                  "",
-                  "pm.test('Chamado recém criado está na lista pendente', function () {",
-                  "  var data = pm.response.json();",
-                  "  var ticketId = pm.collectionVariables.get('ticketId');",
-                  "  var found = data.data.some(function(t) { return t.id === ticketId; });",
-                  "  pm.expect(found).to.eql(true);",
+                  "pm.test('Chamado do cliente esta na lista pendente', () => {",
+                  "  var d = pm.response.json();",
+                  "  var id = pm.collectionVariables.get('ticketId');",
+                  "  pm.expect(d.data.some(t => t.id === id)).to.eql(true);",
                   "});"
                 ]
               }
@@ -557,19 +519,16 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Retorna detalhes corretos do chamado', function () {",
-                  "  var data = pm.response.json();",
-                  "  var ticketId = pm.collectionVariables.get('ticketId');",
-                  "  pm.expect(data.success).to.eql(true);",
-                  "  pm.expect(data.data.id).to.eql(ticketId);",
-                  "  pm.expect(data.data.status).to.eql('pending');",
-                  "  pm.expect(data.data).to.have.property('specialty');",
-                  "  pm.expect(data.data).to.have.property('title');",
-                  "  pm.expect(data.data).to.have.property('customerId');",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Detalhes corretos do chamado', () => {",
+                  "  var d = pm.response.json();",
+                  "  var id = pm.collectionVariables.get('ticketId');",
+                  "  pm.expect(d.success).to.eql(true);",
+                  "  pm.expect(d.data.id).to.eql(id);",
+                  "  pm.expect(d.data.status).to.eql('pending');",
+                  "  pm.expect(d.data).to.have.property('customerId');",
+                  "  pm.expect(d.data).to.have.property('specialty');",
+                  "  pm.expect(d.data).to.have.property('title');",
                   "});"
                 ]
               }
@@ -586,27 +545,21 @@
           }
         },
         {
-          "name": "PATCH /tickets/:id/status - parceiro aceita (pending → accepted)",
+          "name": "PATCH /tickets/:id/status → accepted (parceiro aceita)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "  pm.response.to.have.status(200);",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status atualizado para accepted e partnerId preenchido', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d.success).to.eql(true);",
+                  "  pm.expect(d.data.status).to.eql('accepted');",
+                  "  pm.expect(d.data.partnerId).to.be.a('string').and.not.empty;",
                   "});",
-                  "",
-                  "pm.test('Status atualizado para accepted', function () {",
-                  "  var data = pm.response.json();",
-                  "  pm.expect(data.success).to.eql(true);",
-                  "  pm.expect(data.data.status).to.eql('accepted');",
-                  "  pm.expect(data.data.partnerId).to.be.a('string').and.not.empty;",
-                  "});",
-                  "",
-                  "pm.test('[MOM] Evento ticket.status_changed publicado (pending → accepted)', function () {",
-                  "  pm.expect(true).to.eql(true);",
-                  "});"
+                  "pm.test('[MOM] Verificar no terminal: pending → accepted', () => pm.expect(true).to.eql(true));"
                 ]
               }
             }
@@ -617,10 +570,7 @@
               {"key": "Authorization", "value": "Bearer {{partnerToken}}"},
               {"key": "Content-Type", "value": "application/json"}
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"accepted\"\n}"
-            },
+            "body": {"mode": "raw", "raw": "{\n  \"status\": \"accepted\"\n}"},
             "url": {
               "raw": "{{baseUrl}}/tickets/{{ticketId}}/status",
               "host": ["{{baseUrl}}"],
@@ -629,26 +579,18 @@
           }
         },
         {
-          "name": "PATCH /tickets/:id/status - parceiro inicia (accepted → in_progress)",
+          "name": "PATCH /tickets/:id/status → in_progress (parceiro inicia)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "  pm.response.to.have.status(200);",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status atualizado para in_progress', () => {",
+                  "  pm.expect(pm.response.json().data.status).to.eql('in_progress');",
                   "});",
-                  "",
-                  "pm.test('Status atualizado para in_progress', function () {",
-                  "  var data = pm.response.json();",
-                  "  pm.expect(data.success).to.eql(true);",
-                  "  pm.expect(data.data.status).to.eql('in_progress');",
-                  "});",
-                  "",
-                  "pm.test('[MOM] Evento ticket.status_changed publicado (accepted → in_progress)', function () {",
-                  "  pm.expect(true).to.eql(true);",
-                  "});"
+                  "pm.test('[MOM] Verificar no terminal: accepted → in_progress', () => pm.expect(true).to.eql(true));"
                 ]
               }
             }
@@ -659,10 +601,7 @@
               {"key": "Authorization", "value": "Bearer {{partnerToken}}"},
               {"key": "Content-Type", "value": "application/json"}
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"in_progress\"\n}"
-            },
+            "body": {"mode": "raw", "raw": "{\n  \"status\": \"in_progress\"\n}"},
             "url": {
               "raw": "{{baseUrl}}/tickets/{{ticketId}}/status",
               "host": ["{{baseUrl}}"],
@@ -671,26 +610,18 @@
           }
         },
         {
-          "name": "PATCH /tickets/:id/status - parceiro conclui (in_progress → completed)",
+          "name": "PATCH /tickets/:id/status → completed (parceiro conclui)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "  pm.response.to.have.status(200);",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status atualizado para completed', () => {",
+                  "  pm.expect(pm.response.json().data.status).to.eql('completed');",
                   "});",
-                  "",
-                  "pm.test('Status atualizado para completed', function () {",
-                  "  var data = pm.response.json();",
-                  "  pm.expect(data.success).to.eql(true);",
-                  "  pm.expect(data.data.status).to.eql('completed');",
-                  "});",
-                  "",
-                  "pm.test('[MOM] Evento ticket.status_changed publicado (in_progress → completed)', function () {",
-                  "  pm.expect(true).to.eql(true);",
-                  "});"
+                  "pm.test('[MOM] Verificar no terminal: in_progress → completed', () => pm.expect(true).to.eql(true));"
                 ]
               }
             }
@@ -701,10 +632,7 @@
               {"key": "Authorization", "value": "Bearer {{partnerToken}}"},
               {"key": "Content-Type", "value": "application/json"}
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"completed\"\n}"
-            },
+            "body": {"mode": "raw", "raw": "{\n  \"status\": \"completed\"\n}"},
             "url": {
               "raw": "{{baseUrl}}/tickets/{{ticketId}}/status",
               "host": ["{{baseUrl}}"],
@@ -713,28 +641,25 @@
           }
         },
         {
-          "name": "PATCH /tickets/:id/status - transição inválida (completed → accepted)",
+          "name": "PATCH /tickets/:id/status → accepted (invalido, 422)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 422 (transicao invalida)', function () {",
-                  "  pm.response.to.have.status(422);",
+                  "pm.test('Status 422 - transicao invalida', () => pm.response.to.have.status(422));",
+                  "pm.test('Codigo INVALID_TRANSITION retornado', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d.success).to.eql(false);",
+                  "  pm.expect(d.code).to.eql('INVALID_TRANSITION');",
                   "});",
                   "",
-                  "pm.test('Erro de transicao invalida retornado', function () {",
-                  "  var data = pm.response.json();",
-                  "  pm.expect(data.success).to.eql(false);",
-                  "  pm.expect(data.code).to.eql('INVALID_TRANSITION');",
-                  "});",
-                  "",
-                  "pm.collectionVariables.unset('ticketId');",
-                  "pm.collectionVariables.unset('runInitialized');",
-                  "pm.collectionVariables.unset('runId');",
-                  "pm.collectionVariables.unset('customerToken');",
-                  "pm.collectionVariables.unset('partnerToken');"
+                  "// Limpa variaveis para permitir nova rodada",
+                  "pm.collectionVariables.set('ticketId', '');",
+                  "pm.collectionVariables.set('runInitialized', 'false');",
+                  "pm.collectionVariables.set('customerToken', '');",
+                  "pm.collectionVariables.set('partnerToken', '');"
                 ]
               }
             }
@@ -745,10 +670,7 @@
               {"key": "Authorization", "value": "Bearer {{partnerToken}}"},
               {"key": "Content-Type", "value": "application/json"}
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"accepted\"\n}"
-            },
+            "body": {"mode": "raw", "raw": "{\n  \"status\": \"accepted\"\n}"},
             "url": {
               "raw": "{{baseUrl}}/tickets/{{ticketId}}/status",
               "host": ["{{baseUrl}}"],
@@ -761,13 +683,14 @@
   ],
   "variable": [
     {"key": "baseUrl", "value": "http://localhost:3000"},
-    {"key": "customerEmail", "value": "cliente.teste@lamd.local"},
-    {"key": "partnerEmail", "value": "parceiro.teste@lamd.local"},
     {"key": "defaultPassword", "value": "SenhaForte123"},
     {"key": "adminApiKey", "value": "troque_esta_chave_admin"},
+    {"key": "customerEmail", "value": ""},
+    {"key": "partnerEmail", "value": ""},
     {"key": "customerToken", "value": ""},
     {"key": "partnerToken", "value": ""},
     {"key": "specialtyId", "value": ""},
-    {"key": "ticketId", "value": ""}
+    {"key": "ticketId", "value": ""},
+    {"key": "runInitialized", "value": "false"}
   ]
 }
