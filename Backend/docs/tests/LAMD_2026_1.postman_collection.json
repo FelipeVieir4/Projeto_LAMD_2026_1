@@ -12,14 +12,12 @@
         "type": "text/javascript",
         "exec": [
           "(function () {",
-          "  var runId = Date.now().toString();",
-          "  pm.collectionVariables.set(\"runId\", runId);",
-          "  pm.collectionVariables.set(\"customerEmail\", \"cliente.\" + runId + \"@lamd.local\");",
-          "  pm.collectionVariables.set(\"partnerEmail\",  \"parceiro.\" + runId + \"@lamd.local\");",
+          "  if (pm.collectionVariables.get(\"runInitialized\") === \"true\") return;",
           "  pm.collectionVariables.set(\"customerToken\", \"\");",
           "  pm.collectionVariables.set(\"partnerToken\",  \"\");",
           "  pm.collectionVariables.set(\"specialtyId\", \"\");",
           "  pm.collectionVariables.set(\"ticketId\", \"\");",
+          "  pm.collectionVariables.set(\"runInitialized\", \"true\");",
           "})();"
         ]
       }
@@ -84,6 +82,15 @@
                   "});"
                 ]
               }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"customerEmail\", \"cliente.\" + Date.now() + \"@lamd.local\");"
+                ]
+              }
             }
           ],
           "request": {
@@ -125,6 +132,15 @@
                   "  pm.collectionVariables.set('partnerToken', d.token);",
                   "  pm.expect(d.token).to.be.a('string').and.not.empty;",
                   "});"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"partnerEmail\", \"parceiro.\" + Date.now() + \"@lamd.local\");"
                 ]
               }
             }
@@ -878,7 +894,8 @@
                   "});",
                   "",
                   "// Limpa apenas o ticket — tokens sao mantidos para proximas execucoes",
-                  "pm.collectionVariables.set('ticketId', '');"
+                  "pm.collectionVariables.set('ticketId', '');",
+                  "pm.collectionVariables.set(\"runInitialized\", \"false\");"
                 ]
               }
             }
