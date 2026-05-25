@@ -1,4 +1,4 @@
-﻿services:
+services:
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: chamados-rabbitmq
