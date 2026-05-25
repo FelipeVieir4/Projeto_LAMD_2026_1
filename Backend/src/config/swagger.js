@@ -278,6 +278,94 @@ export const swaggerDocument = {
         }
       }
     },
+    '/tickets': {
+      post: {
+        tags: ['Tickets'],
+        summary: 'Abre um novo chamado (apenas clientes)',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['specialty', 'title'],
+                properties: {
+                  specialty: { type: 'string', example: 'Elétrica' },
+                  title: { type: 'string', example: 'Tomada com faísca na sala' },
+                  description: { type: 'string', example: 'A tomada da sala está faiscando ao ligar qualquer aparelho.' },
+                  addressText: { type: 'string', example: 'Rua das Flores, 123 – Belo Horizonte/MG' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: { description: 'Chamado criado. Evento ticket.created publicado no RabbitMQ.' },
+          400: { description: 'Campos obrigatórios ausentes' },
+          403: { description: 'Apenas clientes podem abrir chamados' }
+        }
+      },
+      get: {
+        tags: ['Tickets'],
+        summary: 'Lista chamados do usuário autenticado',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { in: 'query', name: 'status', schema: { type: 'string', enum: ['pending','accepted','in_progress','completed','cancelled'] }, required: false },
+          { in: 'query', name: 'pending', schema: { type: 'boolean' }, required: false, description: 'Parceiro: lista apenas chamados pendentes (sem parceiro)' }
+        ],
+        responses: {
+          200: { description: 'Lista de chamados' }
+        }
+      }
+    },
+    '/tickets/{id}': {
+      get: {
+        tags: ['Tickets'],
+        summary: 'Retorna detalhes de um chamado',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }
+        ],
+        responses: {
+          200: { description: 'Detalhes do chamado' },
+          404: { description: 'Chamado não encontrado' }
+        }
+      }
+    },
+    '/tickets/{id}/status': {
+      patch: {
+        tags: ['Tickets'],
+        summary: 'Atualiza o status de um chamado',
+        description: 'Parceiros aceitam/iniciam/concluem. Clientes podem cancelar. Evento ticket.status_changed publicado no RabbitMQ.',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['status'],
+                properties: {
+                  status: {
+                    type: 'string',
+                    enum: ['accepted', 'in_progress', 'completed', 'cancelled'],
+                    example: 'accepted'
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: 'Status atualizado. Evento ticket.status_changed publicado no RabbitMQ.' },
+          422: { description: 'Transição de status inválida' }
+        }
+      }
+    },
     '/admin/specialties/{id}': {
       put: {
         tags: ['Admin'],
