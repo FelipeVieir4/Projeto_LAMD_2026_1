@@ -1,4 +1,4 @@
-FROM projeto_lamd_2026_1-backend:latest
+FROM node:20-alpine
 
 WORKDIR /app
 
