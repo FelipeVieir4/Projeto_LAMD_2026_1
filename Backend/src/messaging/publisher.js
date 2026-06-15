@@ -8,6 +8,7 @@ import { getPublisherChannel, EXCHANGE_NAME } from '../config/rabbitmq.js';
 export const Events = {
   TICKET_CREATION_REQUESTED: 'ticket.creation_requested',
   TICKET_CREATED: 'ticket.created',
+  TICKET_STATUS_CHANGE_REQUESTED: 'ticket.status_change_requested',
   TICKET_STATUS_CHANGED: 'ticket.status_changed'
 };
 

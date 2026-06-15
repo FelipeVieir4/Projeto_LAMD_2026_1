@@ -1,4 +1,4 @@
-import { pool, query } from '../../config/database.js';
+import { query } from '../../config/database.js';
 
 function mapTicketRow(row) {
   return {
@@ -17,8 +17,8 @@ function mapTicketRow(row) {
 
 export async function createTicket(data) {
   const result = await query(
-    `INSERT INTO tickets (id, customer_id, specialty, title, description, address_text)
-     VALUES (COALESCE($1::uuid, gen_random_uuid()), $2, $3, $4, $5, $6)
+    `INSERT INTO tickets (id, customer_id, specialty, title, description, address_text, status)
+     VALUES ($1::uuid, $2, $3, $4, $5, $6, 'pending')
      ON CONFLICT (id) DO UPDATE SET
        customer_id = EXCLUDED.customer_id,
        specialty = EXCLUDED.specialty,

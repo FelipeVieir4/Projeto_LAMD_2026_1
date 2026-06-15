@@ -1,6 +1,6 @@
 import { createConsumerChannel, EXCHANGE_NAME } from '../config/rabbitmq.js';
 import { Events } from './publisher.js';
-import { processTicketCreationRequest } from '../modules/tickets/tickets.service.js';
+import { processTicketCreationRequest, processTicketStatusChangeRequest } from '../modules/tickets/tickets.service.js';
 
 //Filas que eu criei. Cada fila tem um nome, uma chave de roteamento (routingKey) que corresponde ao evento que ela consome, e um handler que processa as mensagens recebidas.
 const QUEUES = [
@@ -15,14 +15,18 @@ const QUEUES = [
     handler: handleTicketCreated
   },
   {
+    name: 'ticket_status_change_queue',
+    routingKey: Events.TICKET_STATUS_CHANGE_REQUESTED,
+    handler: handleTicketStatusChangeRequested
+  },
+  {
     name: 'ticket_status_changed_queue',
     routingKey: Events.TICKET_STATUS_CHANGED,
     handler: handleTicketStatusChanged
   }
 ];
 
-// Handlers que processam mensagens consumidas do RabbitMQ
-// Essas funções registram em log os eventos de tickets recebidos do message broker
+// Chama o service para criar o ticket no banco de dados e depois publica um evento de "ticket criado" para notificar outros serviços ou componentes do sistema sobre a nova criação. O log detalhado inclui o ID do ticket, especialidade e cliente para facilitar o monitoramento e depuração.
 async function handleTicketCreationRequested(payload) {
   const ticket = await processTicketCreationRequest(payload);
 
@@ -33,6 +37,18 @@ async function handleTicketCreationRequested(payload) {
     `Cliente: ${ticket.customerId}`
   );
 }
+
+async function handleTicketStatusChangeRequested(payload) {
+  const ticket = await processTicketStatusChangeRequest(payload);
+
+  console.log(
+    `[MOM][WORKER][ticket.status_change_requested] ` +
+    `Chamado #${ticket.id} atualizado no banco | ` +
+    `Novo status: "${ticket.status}" | ` +
+    `Parceiro: ${ticket.partnerId ?? 'null'}`
+  );
+}
+
 
 function handleTicketCreated(payload) {
   // Log de criação de novo ticket com detalhes: ID, especialidade, cliente e título

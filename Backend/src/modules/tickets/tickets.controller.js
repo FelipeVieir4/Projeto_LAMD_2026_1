@@ -42,7 +42,7 @@ export async function updateStatus(req, res) {
       status: req.body.status,
       user: req.user
     });
-    return res.json({ success: true, data: ticket });
+    return res.status(202).json({ success: true, data: ticket });
   } catch (err) {
     return res.status(err.status ?? 500).json({ success: false, code: err.code, message: err.message });
   }

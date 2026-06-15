@@ -53,8 +53,6 @@ erDiagram
   PARTNERS ||--o{ PARTNER_SPECIALTIES : possui
   SPECIALTIES ||--o{ PARTNER_SPECIALTIES : classifica
   PARTNERS }o--o{ REGIONS : atende
-  REGIONS ||--o{ TICKETS : classifica
-  SERVICES ||--o{ TICKETS : define
   TICKETS ||--o{ TICKET_STATUS_HISTORY : registra
   TICKETS ||--o{ NOTIFICATIONS : gera
   PARTNERS ||--o{ TICKETS : assume
@@ -112,13 +110,14 @@ erDiagram
   TICKETS {
     uuid id
     uuid customer_id
-    uuid region_id
-    uuid service_id
     uuid partner_id
+    string specialty
     string title
+    string description
+    string address_text
     string status
-    string cep
-    string neighborhood
+    datetime created_at
+    datetime updated_at
   }
 
   TICKET_STATUS_HISTORY {

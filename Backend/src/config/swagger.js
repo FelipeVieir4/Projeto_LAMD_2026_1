@@ -216,6 +216,17 @@ export let swaggerDocument = {
         }
       }
     },
+    '/api/v1/specialties': {
+      get: {
+        tags: ['Specialties'],
+        summary: 'Lista especialidades ativas para o app',
+        responses: {
+          200: {
+            description: 'Especialidades listadas com sucesso'
+          }
+        }
+      }
+    },
     '/api/v1/admin/specialties': {
       get: {
         tags: ['Admin'],
@@ -299,9 +310,9 @@ export let swaggerDocument = {
             'application/json': {
               schema: {
                 type: 'object',
-                required: ['specialty', 'title'],
+                required: ['ticketId', 'specialty', 'title'],
                 properties: {
-                  ticketId: { type: 'string', format: 'uuid', example: '7a0e0d3a-8a9b-4bc6-9c4f-0c8fd4f33b1a', description: 'UUID gerado pelo app para sincronização offline-first' },
+                  ticketId: { type: 'string', format: 'uuid', example: '7a0e0d3a-8a9b-4bc6-9c4f-0c8fd4f33b1a', description: 'UUID informado pelo app para sincronização offline-first' },
                   specialty: { type: 'string', example: 'Elétrica' },
                   title: { type: 'string', example: 'Tomada com faísca na sala' },
                   description: { type: 'string', example: 'A tomada da sala está faiscando ao ligar qualquer aparelho.' },
@@ -312,7 +323,7 @@ export let swaggerDocument = {
           }
         },
         responses: {
-          202: { description: 'Pedido aceito. Evento ticket.creation_requested publicado no RabbitMQ.' },
+          202: { description: 'Pedido aceito. Evento ticket.creation_requested publicado no RabbitMQ e o app pode seguir com polling.' },
           400: { description: 'Campos obrigatórios ausentes' },
           403: { description: 'Apenas clientes podem abrir chamados' }
         }
@@ -348,7 +359,7 @@ export let swaggerDocument = {
       patch: {
         tags: ['Tickets'],
         summary: 'Atualiza o status de um chamado',
-        description: 'Parceiros aceitam/iniciam/concluem. Clientes podem cancelar. Evento ticket.status_changed publicado no RabbitMQ.',
+        description: 'Parceiros aceitam/iniciam/concluem. Clientes podem cancelar. O PATCH publica ticket.status_change_requested e o worker emite ticket.status_changed após persistir.',
         security: [{ BearerAuth: [] }],
         parameters: [
           { in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }

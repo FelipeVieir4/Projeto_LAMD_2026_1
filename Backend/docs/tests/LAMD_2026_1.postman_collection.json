@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "6fceebf2-3a3d-4f1b-9f93-d71d47de4a2c",
     "name": "LAMD 2026.1 - Backend API",
-    "description": "Colecao completa Sprint 1 + Sprint 2. Execute em ordem ou rode apenas a pasta 04 — os tokens sao criados automaticamente quando necessario.",
+    "description": "Colecao do backend com Auth, listagem publica de especialidades, admin e fluxo de tickets offline-first. Execute em ordem ou rode apenas a pasta 04 — os tokens sao criados automaticamente quando necessario.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -16,6 +16,7 @@
           "  pm.collectionVariables.set(\"customerToken\", \"\");",
           "  pm.collectionVariables.set(\"partnerToken\",  \"\");",
           "  pm.collectionVariables.set(\"specialtyId\", \"\");",
+          "  pm.collectionVariables.set(\"specialtyValue\", \"\");",
           "  pm.collectionVariables.set(\"ticketId\", \"\");",
           "  pm.collectionVariables.set(\"runInitialized\", \"true\");",
           "})();"
@@ -328,7 +329,7 @@
       ]
     },
     {
-      "name": "03 - Admin - Especialidades",
+      "name": "03 - Especialidades (App)",
       "item": [
         {
           "name": "POST /admin/specialties - cria especialidade",
@@ -559,7 +560,45 @@
       ]
     },
     {
-      "name": "04 - Tickets (Sprint 2 - MOM)",
+      "name": "04 - Admin - Especialidades",
+      "item": [
+        {
+          "name": "GET /specialties - lista especialidades ativas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Retorna array de especialidades ativas', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d.specialties).to.be.an('array');",
+                  "  pm.expect(d.specialties.length).to.be.greaterThan(0);",
+                  "  pm.collectionVariables.set('specialtyValue', d.specialties[0].name);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/specialties",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "specialties"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Tickets (Offline-first + MOM)",
       "description": "Fluxo completo de chamados com eventos RabbitMQ. O pre-request desta pasta garante que os tokens existam — registra e faz login automaticamente se necessario. Observe o terminal do backend para ver os pares [PUBLISH] e [CONSUME] em tempo real.",
       "event": [
         {
@@ -633,6 +672,24 @@
           "name": "POST /tickets - cliente abre chamado",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function uuidv4() {",
+                  "  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {",
+                  "    var r = Math.random() * 16 | 0;",
+                  "    var v = c === 'x' ? r : (r & 0x3 | 0x8);",
+                  "    return v.toString(16);",
+                  "  });",
+                  "}",
+                  "var specialtyValue = pm.collectionVariables.get('specialtyValue') || 'Elétrica';",
+                  "pm.collectionVariables.set('specialtyValue', specialtyValue);",
+                  "pm.collectionVariables.set('ticketId', uuidv4());"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -642,10 +699,10 @@
                   "  var d = pm.response.json();",
                   "  pm.expect(d.success).to.eql(true);",
                   "  pm.expect(d.data.status).to.eql('pending');",
-                  "  pm.expect(d.data.id).to.be.a('string').and.not.empty;",
+                  "  pm.expect(d.data.id).to.eql(pm.collectionVariables.get('ticketId'));",
                   "  pm.collectionVariables.set('ticketId', d.data.id);",
                   "});",
-                  "pm.test('[MOM] Verificar no terminal do backend: [PUBLISH] ticket.created + [CONSUME] ticket.created', () => pm.expect(true).to.eql(true));"
+                  "pm.test('[MOM] Verificar no terminal do backend: [PUBLISH] ticket.creation_requested + [CONSUME] ticket.creation_requested', () => pm.expect(true).to.eql(true));"
                 ]
               }
             }
@@ -664,7 +721,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"specialty\": \"Eletrica\",\n  \"title\": \"Tomada com fagulha na sala\",\n  \"description\": \"A tomada da sala esta faiscando ao ligar qualquer aparelho.\",\n  \"addressText\": \"Rua das Flores, 123 - Belo Horizonte/MG\"\n}"
+              "raw": "{\n  \"ticketId\": \"{{ticketId}}\",\n  \"specialty\": \"{{specialtyValue}}\",\n  \"title\": \"Tomada com fagulha na sala\",\n  \"description\": \"A tomada da sala esta faiscando ao ligar qualquer aparelho.\",\n  \"addressText\": \"Rua das Flores, 123 - Belo Horizonte/MG\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/tickets",
@@ -807,13 +864,14 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Status accepted e partnerId preenchido', () => {",
+                  "pm.test('Status 202', () => pm.response.to.have.status(202));",
+                  "pm.test('Pedido de status accepted aceito', () => {",
                   "  var d = pm.response.json();",
-                  "  pm.expect(d.data.status).to.eql('accepted');",
-                  "  pm.expect(d.data.partnerId).to.be.a('string').and.not.empty;",
+                  "  pm.expect(d.data.status).to.eql('pending');",
+                  "  pm.expect(d.data.requestedStatus).to.eql('accepted');",
+                  "  pm.expect(d.data.queued).to.eql(true);",
                   "});",
-                  "pm.test('[MOM] Verificar no terminal: pending → accepted', () => pm.expect(true).to.eql(true));"
+                  "pm.test('[MOM] Verificar no terminal: ticket.status_change_requested → ticket.status_changed', () => pm.expect(true).to.eql(true));"
                 ]
               }
             }
@@ -855,9 +913,13 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Status in_progress', () => pm.expect(pm.response.json().data.status).to.eql('in_progress'));",
-                  "pm.test('[MOM] Verificar no terminal: accepted → in_progress', () => pm.expect(true).to.eql(true));"
+                  "pm.test('Status 202', () => pm.response.to.have.status(202));",
+                  "pm.test('Pedido de status in_progress aceito', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d.data.requestedStatus).to.eql('in_progress');",
+                  "  pm.expect(d.data.queued).to.eql(true);",
+                  "});",
+                  "pm.test('[MOM] Verificar no terminal: ticket.status_change_requested → ticket.status_changed', () => pm.expect(true).to.eql(true));"
                 ]
               }
             }
@@ -899,9 +961,13 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Status completed', () => pm.expect(pm.response.json().data.status).to.eql('completed'));",
-                  "pm.test('[MOM] Verificar no terminal: in_progress → completed', () => pm.expect(true).to.eql(true));"
+                  "pm.test('Status 202', () => pm.response.to.have.status(202));",
+                  "pm.test('Pedido de status completed aceito', () => {",
+                  "  var d = pm.response.json();",
+                  "  pm.expect(d.data.requestedStatus).to.eql('completed');",
+                  "  pm.expect(d.data.queued).to.eql(true);",
+                  "});",
+                  "pm.test('[MOM] Verificar no terminal: ticket.status_change_requested → ticket.status_changed', () => pm.expect(true).to.eql(true));"
                 ]
               }
             }
@@ -1020,6 +1086,10 @@
     },
     {
       "key": "specialtyId",
+      "value": ""
+    },
+    {
+      "key": "specialtyValue",
       "value": ""
     },
     {

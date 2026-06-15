@@ -82,24 +82,14 @@ CREATE TABLE IF NOT EXISTS services (
 );
 
 CREATE TABLE IF NOT EXISTS tickets (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY,
   customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
-  region_id UUID REFERENCES regions(id) ON DELETE SET NULL,
-  service_id UUID REFERENCES services(id) ON DELETE SET NULL,
   partner_id UUID REFERENCES partners(id) ON DELETE SET NULL,
+  specialty TEXT NOT NULL,
   title TEXT NOT NULL,
   description TEXT,
-  cep TEXT,
-  neighborhood TEXT,
-  address TEXT,
-  latitude NUMERIC(10, 7),
-  longitude NUMERIC(10, 7),
-  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'analyzing', 'sent', 'accepted', 'in_progress', 'completed', 'canceled')),
-  priority TEXT NOT NULL DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
-  opened_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  accepted_at TIMESTAMPTZ,
-  started_at TIMESTAMPTZ,
-  finished_at TIMESTAMPTZ,
+  address_text TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'in_progress', 'completed', 'cancelled')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -107,7 +97,7 @@ CREATE TABLE IF NOT EXISTS tickets (
 CREATE TABLE IF NOT EXISTS ticket_status_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   ticket_id UUID NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
-  status TEXT NOT NULL CHECK (status IN ('open', 'analyzing', 'sent', 'accepted', 'in_progress', 'completed', 'canceled')),
+  status TEXT NOT NULL CHECK (status IN ('pending', 'accepted', 'in_progress', 'completed', 'cancelled')),
   changed_by_customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
   changed_by_partner_id UUID REFERENCES partners(id) ON DELETE SET NULL,
   note TEXT,
