@@ -291,7 +291,7 @@ export let swaggerDocument = {
     '/api/v1/tickets': {
       post: {
         tags: ['Tickets'],
-        summary: 'Abre um novo chamado (apenas clientes)',
+        summary: 'Solicita a abertura de um novo chamado (apenas clientes)',
         security: [{ BearerAuth: [] }],
         requestBody: {
           required: true,
@@ -301,6 +301,7 @@ export let swaggerDocument = {
                 type: 'object',
                 required: ['specialty', 'title'],
                 properties: {
+                  ticketId: { type: 'string', format: 'uuid', example: '7a0e0d3a-8a9b-4bc6-9c4f-0c8fd4f33b1a', description: 'UUID gerado pelo app para sincronização offline-first' },
                   specialty: { type: 'string', example: 'Elétrica' },
                   title: { type: 'string', example: 'Tomada com faísca na sala' },
                   description: { type: 'string', example: 'A tomada da sala está faiscando ao ligar qualquer aparelho.' },
@@ -311,7 +312,7 @@ export let swaggerDocument = {
           }
         },
         responses: {
-          201: { description: 'Chamado criado. Evento ticket.created publicado no RabbitMQ.' },
+          202: { description: 'Pedido aceito. Evento ticket.creation_requested publicado no RabbitMQ.' },
           400: { description: 'Campos obrigatórios ausentes' },
           403: { description: 'Apenas clientes podem abrir chamados' }
         }

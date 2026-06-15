@@ -1,6 +1,6 @@
 # Diagramas Do Fluxo
 
-## Arquitetura Inicial
+## Arquitetura Atual
 
 ```mermaid
 flowchart LR
@@ -15,7 +15,8 @@ flowchart LR
   subgraph API[Backend - Node.js/Express]
     A1[Auth JWT]
     A2[Admin Especialidades]
-    A3[Regras de chamados]
+    A3[Publicação de comandos]
+    A4[Worker/consumer de chamados]
   end
 
   subgraph DB[Supabase PostgreSQL]
@@ -28,19 +29,19 @@ flowchart LR
   C1 -->|HTTPS REST| API
   P1 -->|HTTPS REST| API
   API -->|SQL over TLS| DB
+  API -->|RabbitMQ| API
 ```
 
 ## Fluxo Principal Do Chamado
 
 ```mermaid
 flowchart TD
-  A[Usuário abre chamado] --> B[Backend identifica região]
-  B --> C[Busca parceiros vinculados à região]
-  C --> D[Envia notificações]
-  D --> E[Técnico aceita o chamado]
-  E --> F[Ticket recebe parceiro responsável]
-  F --> G[Atendimento em andamento]
-  G --> H[Chamado concluído]
+  A[Flutter gera UUID e envia pedido] --> B[Controller valida e publica comando]
+  B --> C[Fila ticket.creation_requested]
+  C --> D[Worker consome e persiste ticket]
+  D --> E[Worker publica ticket.created]
+  E --> F[Outros consumidores processam notificações]
+  F --> G[App sincroniza estado local]
 ```
 
 ## Entidades Do Banco

@@ -1,7 +1,14 @@
 import { createConsumerChannel, EXCHANGE_NAME } from '../config/rabbitmq.js';
 import { Events } from './publisher.js';
+import { processTicketCreationRequest } from '../modules/tickets/tickets.service.js';
 
+//Filas que eu criei. Cada fila tem um nome, uma chave de roteamento (routingKey) que corresponde ao evento que ela consome, e um handler que processa as mensagens recebidas.
 const QUEUES = [
+  {
+    name: 'ticket_creation_queue',
+    routingKey: Events.TICKET_CREATION_REQUESTED,
+    handler: handleTicketCreationRequested
+  },
   {
     name: 'ticket_created_queue',
     routingKey: Events.TICKET_CREATED,
@@ -14,7 +21,21 @@ const QUEUES = [
   }
 ];
 
+// Handlers que processam mensagens consumidas do RabbitMQ
+// Essas funções registram em log os eventos de tickets recebidos do message broker
+async function handleTicketCreationRequested(payload) {
+  const ticket = await processTicketCreationRequest(payload);
+
+  console.log(
+    `[MOM][WORKER][ticket.creation_requested] ` +
+    `Chamado #${ticket.id} persistido no banco | ` +
+    `Especialidade: "${ticket.specialty}" | ` +
+    `Cliente: ${ticket.customerId}`
+  );
+}
+
 function handleTicketCreated(payload) {
+  // Log de criação de novo ticket com detalhes: ID, especialidade, cliente e título
   console.log(
     `[MOM][CONSUME][ticket.created] ` +
     `Novo chamado #${payload.ticketId} criado | ` +
@@ -25,6 +46,7 @@ function handleTicketCreated(payload) {
 }
 
 function handleTicketStatusChanged(payload) {
+  // Log de mudança de status de ticket com informações de transição e responsável
   console.log(
     `[MOM][CONSUME][ticket.status_changed] ` +
     `Chamado #${payload.ticketId} | ` +
@@ -41,16 +63,16 @@ export async function startConsumers() {
     await channel.assertQueue(name, { durable: true });
     await channel.bindQueue(name, EXCHANGE_NAME, routingKey);
 
-    channel.consume(name, (msg) => {
+    channel.consume(name, async (msg) => {
       if (!msg) return;
 
       try {
         const payload = JSON.parse(msg.content.toString());
-        handler(payload);
+        await handler(payload);
         channel.ack(msg);
       } catch (err) {
         console.error(`[MOM][CONSUME ERROR] ${routingKey}:`, err.message);
-        channel.nack(msg, false, false);
+        channel.nack(msg, false, routingKey === Events.TICKET_CREATION_REQUESTED);
       }
     });
 

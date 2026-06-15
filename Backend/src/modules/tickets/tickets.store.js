@@ -17,10 +17,16 @@ function mapTicketRow(row) {
 
 export async function createTicket(data) {
   const result = await query(
-    `INSERT INTO tickets (customer_id, specialty, title, description, address_text)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO tickets (id, customer_id, specialty, title, description, address_text)
+     VALUES (COALESCE($1::uuid, gen_random_uuid()), $2, $3, $4, $5, $6)
+     ON CONFLICT (id) DO UPDATE SET
+       customer_id = EXCLUDED.customer_id,
+       specialty = EXCLUDED.specialty,
+       title = EXCLUDED.title,
+       description = EXCLUDED.description,
+       address_text = EXCLUDED.address_text
      RETURNING *`,
-    [data.customerId, data.specialty, data.title, data.description ?? null, data.addressText ?? null]
+    [data.id ?? null, data.customerId, data.specialty, data.title, data.description ?? null, data.addressText ?? null]
   );
   return mapTicketRow(result.rows[0]);
 }

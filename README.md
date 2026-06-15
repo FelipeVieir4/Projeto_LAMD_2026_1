@@ -6,7 +6,7 @@ Plataforma de atendimento de chamados técnicos domiciliares com roteamento por 
 
 ```
 .
-├── Backend/          # API REST (Node.js + Express + PostgreSQL + RabbitMQ)
+├── Backend/          # API REST + worker assíncrono (Node.js + Express + PostgreSQL + RabbitMQ)
 ├── App/              # App do cliente (em desenvolvimento)
 ├── App_parceiro/     # App do parceiro/técnico (em desenvolvimento)
 └── reports/          # Relatórios de sprint
@@ -30,6 +30,7 @@ Aguarde as mensagens de confirmação no terminal:
 ```
 chamados-backend   | Backend running on port 3000
 chamados-backend   | [RabbitMQ] Conectado com sucesso.
+chamados-backend   | [MOM] Consumer registrado: queue="ticket_creation_queue"
 chamados-backend   | [MOM] Consumer registrado: queue="ticket_created_queue"
 chamados-backend   | [MOM] Consumer registrado: queue="ticket_status_changed_queue"
 ```

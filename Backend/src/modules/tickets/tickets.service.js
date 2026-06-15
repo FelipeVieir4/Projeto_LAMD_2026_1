@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   createTicket as dbCreateTicket,
   findTicketById,
@@ -24,35 +25,89 @@ function createError(message, code, status) {
   return err;
 }
 
-export async function createTicket(user, data) {
-  if (user.program !== 'customer') {
-    throw createError('Apenas clientes podem abrir chamados.', 'FORBIDDEN', 403);
-  }
-
+function normalizeTicketFields(data) {
+  const ticketId = String(data?.ticketId ?? data?.id ?? '').trim();
   const specialty = String(data?.specialty ?? '').trim();
   const title = String(data?.title ?? '').trim();
 
   if (!specialty) throw createError('Informe a especialidade do chamado.', 'MISSING_SPECIALTY', 400);
   if (!title) throw createError('Informe o título do chamado.', 'MISSING_TITLE', 400);
 
-  const ticket = await dbCreateTicket({
-    customerId: user.id,
+  return {
+    ticketId: ticketId || null,
     specialty,
     title,
     description: data?.description ?? null,
     addressText: data?.addressText ?? null
-  });
+  };
+}
 
-  await publishEvent(Events.TICKET_CREATED, {
-    ticketId: ticket.id,
-    customerId: ticket.customerId,
+// Esta função apenas trata e envia para a fila de criação de tickets, que é consumida por outro worker. 
+// O processo de criação real do ticket no banco de dados acontece no handler do consumidor, 
+// garantindo que o ticket só seja criado após o processamento do evento.
+export async function createTicket(user, data) {
+  if (user.program !== 'customer') {
+    throw createError('Apenas clientes podem abrir chamados.', 'FORBIDDEN', 403);
+  }
+
+  const ticket = normalizeTicketFields(data);
+  const ticketId = ticket.ticketId ?? randomUUID();
+
+  await publishEvent(Events.TICKET_CREATION_REQUESTED, {
+    ticketId,
+    customerId: user.id,
     specialty: ticket.specialty,
     title: ticket.title,
     description: ticket.description,
     addressText: ticket.addressText,
-    createdAt: ticket.createdAt
+    requestedBy: user.id,
+    requestedByProgram: user.program,
+    requestedAt: new Date().toISOString()
+  });
+  return {
+    id: ticketId,
+    customerId: user.id,
+    specialty: ticket.specialty,
+    title: ticket.title,
+    description: ticket.description,
+    addressText: ticket.addressText,
+    status: 'queued'
+  };
+}
+
+export async function processTicketCreationRequest(payload) {
+  const ticket = normalizeTicketFields(payload);
+  const ticketId = String(payload?.ticketId ?? payload?.id ?? '').trim();
+
+  if (!ticketId) {
+    throw createError('O comando de criação precisa conter ticketId.', 'MISSING_TICKET_ID', 400);
+  }
+
+  if (!String(payload?.customerId ?? '').trim()) {
+    throw createError('O comando de criação precisa conter customerId.', 'MISSING_CUSTOMER_ID', 400);
+  }
+
+  const createdTicket = await dbCreateTicket({
+    id: ticketId,
+    customerId: payload.customerId,
+    specialty: ticket.specialty,
+    title: ticket.title,
+    description: ticket.description,
+    addressText: ticket.addressText
   });
 
+  await publishEvent(Events.TICKET_CREATED, {
+    ticketId: createdTicket.id,
+    customerId: createdTicket.customerId,
+    specialty: createdTicket.specialty,
+    title: createdTicket.title,
+    description: createdTicket.description,
+    addressText: createdTicket.addressText,
+    createdAt: createdTicket.createdAt,
+    processedAt: new Date().toISOString()
+  });
+
+  return createdTicket;
   return ticket;
 }
 
