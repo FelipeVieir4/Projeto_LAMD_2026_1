@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../data/repositories/auth_repository.dart';
-import 'login_screen.dart';
-import 'tickets_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -32,12 +30,8 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
     final token = await AuthRepository().getToken();
     if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>
-            token != null ? const TicketsScreen() : const LoginScreen(),
-      ),
+    Navigator.of(context).pushReplacementNamed(
+      token != null ? '/home' : '/login',
     );
   }
 
@@ -73,7 +67,7 @@ class _SplashScreenState extends State<SplashScreen>
               ),
               const SizedBox(height: 24),
               const Text(
-                'LAMD',
+                'Fixit LAMD',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 36,

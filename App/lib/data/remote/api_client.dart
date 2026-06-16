@@ -54,6 +54,23 @@ class ApiClient {
     }
   }
 
+  Future<dynamic> patch(String path, Map<String, dynamic> body) async {
+    try {
+      final response = await http
+          .patch(
+            Uri.parse('${AppConstants.baseUrl}$path'),
+            headers: _headers,
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 10));
+      return _parse(response);
+    } on SocketException {
+      throw ApiException('Sem conexão com o servidor.');
+    } on TimeoutException {
+      throw ApiException('Tempo de resposta esgotado.');
+    }
+  }
+
   dynamic _parse(http.Response response) {
     dynamic body;
     try {

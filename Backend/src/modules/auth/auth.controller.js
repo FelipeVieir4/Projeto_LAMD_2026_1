@@ -1,4 +1,4 @@
-import { getAuthenticatedAccount, loginAccount, registerAccount } from './auth.service.js';
+import { changePasswordService, getAuthenticatedAccount, loginAccount, registerAccount, updateProfileService } from './auth.service.js';
 
 function handleAuthError(response, error) {
   const status = error.status ?? 500;
@@ -29,6 +29,24 @@ export async function login(request, response) {
 export async function me(request, response) {
   try {
     const result = await getAuthenticatedAccount(request.headers.authorization);
+    response.status(200).json(result);
+  } catch (error) {
+    handleAuthError(response, error);
+  }
+}
+
+export async function updateProfile(request, response) {
+  try {
+    const result = await updateProfileService(request.user.id, request.user.program, request.body);
+    response.status(200).json(result);
+  } catch (error) {
+    handleAuthError(response, error);
+  }
+}
+
+export async function changePassword(request, response) {
+  try {
+    const result = await changePasswordService(request.user.id, request.user.program, request.body);
     response.status(200).json(result);
   } catch (error) {
     handleAuthError(response, error);

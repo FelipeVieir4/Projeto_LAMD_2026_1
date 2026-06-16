@@ -267,6 +267,25 @@ export async function createUser(program, userData) {
   }
 }
 
+export async function updateCustomer(id, { name, phone }) {
+  const result = await query(
+    `UPDATE customers
+     SET name = $1, phone = $2, updated_at = NOW()
+     WHERE id = $3
+     RETURNING id, email, password_hash, name, phone, status, created_at, updated_at`,
+    [name, phone ?? null, id]
+  );
+  return result.rows[0] ? mapCustomerRow(result.rows[0]) : null;
+}
+
+export async function updateCustomerPassword(id, passwordHash) {
+  const result = await query(
+    `UPDATE customers SET password_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING id`,
+    [passwordHash, id]
+  );
+  return result.rows[0] ?? null;
+}
+
 export function sanitizeUser(user) {
   if (!user) {
     return null;

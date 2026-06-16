@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/remote/api_client.dart';
 import '../data/repositories/auth_repository.dart';
-import 'tickets_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -41,11 +40,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         phone: _phoneCtrl.text.trim(),
       );
       if (!mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const TicketsScreen()),
-        (_) => false,
-      );
+      Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

@@ -1,11 +1,35 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../core/theme.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/tickets_repository.dart';
 import '../models/ticket.dart';
+import '../widgets/app_bottom_nav.dart';
 import '../widgets/ticket_card.dart';
 import 'create_ticket_screen.dart';
-import 'login_screen.dart';
+import 'ticket_detail_screen.dart';
+
+enum _Filter { all, open, inProgress, done }
+
+extension _FilterX on _Filter {
+  String get label => switch (this) {
+        _Filter.all => 'Todos',
+        _Filter.open => 'Abertos',
+        _Filter.inProgress => 'Em andamento',
+        _Filter.done => 'Concluídos',
+      };
+
+  bool matches(Ticket t) => switch (this) {
+        _Filter.all => true,
+        _Filter.open => t.status == TicketStatus.pending,
+        _Filter.inProgress =>
+          t.status == TicketStatus.accepted ||
+              t.status == TicketStatus.inProgress,
+        _Filter.done =>
+          t.status == TicketStatus.completed ||
+              t.status == TicketStatus.cancelled,
+      };
+}
 
 class TicketsScreen extends StatefulWidget {
   const TicketsScreen({super.key});
@@ -17,17 +41,20 @@ class TicketsScreen extends StatefulWidget {
 class _TicketsScreenState extends State<TicketsScreen>
     with WidgetsBindingObserver {
   final _auth = AuthRepository();
-  List<Ticket> _tickets = [];
+  List<Ticket> _allTickets = [];
+  _Filter _filter = _Filter.all;
   bool _loading = true;
   bool _hasUnsynced = false;
   bool _isSyncing = false;
   bool _loadingInProgress = false;
-  String _userName = '';
   String _userId = '';
   String _token = '';
 
   Timer? _syncTimer;
   static const int _maxSyncAttempts = 10;
+
+  List<Ticket> get _filtered =>
+      _allTickets.where((t) => _filter.matches(t)).toList();
 
   @override
   void initState() {
@@ -43,7 +70,6 @@ class _TicketsScreenState extends State<TicketsScreen>
     super.dispose();
   }
 
-  // Reinicia polling quando o app volta ao foreground
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _token.isNotEmpty) {
@@ -51,7 +77,6 @@ class _TicketsScreenState extends State<TicketsScreen>
     }
   }
 
-  // Inicia polling — idempotente: ignora se já está rodando
   void _startSyncPolling() {
     if (_syncTimer != null) return;
     int attempts = 0;
@@ -69,24 +94,22 @@ class _TicketsScreenState extends State<TicketsScreen>
 
   Future<void> _init() async {
     _token = await _auth.getToken() ?? '';
-    _userName = await _auth.getSavedUserName() ?? 'Usuário';
     _userId = await _auth.getSavedUserId() ?? '';
     await _loadTickets();
   }
 
-  // Carrega tickets e auto-inicia polling se houver pendentes sem timer ativo
   Future<void> _loadTickets() async {
     if (!mounted || _loadingInProgress) return;
     _loadingInProgress = true;
-    if (_tickets.isEmpty) setState(() => _loading = true);
+    if (_allTickets.isEmpty) setState(() => _loading = true);
     try {
       final repo = TicketsRepository(token: _token);
       await repo.syncPending();
-      final tickets = await repo.syncAndList();
+      final all = await repo.syncAndList();
       if (!mounted) return;
       setState(() {
-        _tickets = tickets;
-        _hasUnsynced = tickets.any((t) => !t.isSynced);
+        _allTickets = all;
+        _hasUnsynced = all.any((t) => !t.isSynced);
         _loading = false;
       });
       if (_hasUnsynced && _syncTimer == null) _startSyncPolling();
@@ -97,16 +120,6 @@ class _TicketsScreenState extends State<TicketsScreen>
     }
   }
 
-  Future<void> _logout() async {
-    await _auth.logout();
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (_) => false,
-    );
-  }
-
   Future<void> _openCreate() async {
     final created = await Navigator.push<bool>(
       context,
@@ -114,43 +127,61 @@ class _TicketsScreenState extends State<TicketsScreen>
         builder: (_) => CreateTicketScreen(token: _token, userId: _userId),
       ),
     );
-    // _loadTickets já vai disparar o polling automaticamente se houver pendentes
     if (created == true) _loadTickets();
+  }
+
+  Future<void> _openDetail(Ticket ticket) async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TicketDetailScreen(ticket: ticket, token: _token),
+      ),
+    );
+    if (changed == true) _loadTickets();
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final filtered = _filtered;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Meus Chamados'),
-        actions: [
-          IconButton(
-            tooltip: 'Sair',
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: _logout,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: _FilterBar(
+            selected: _filter,
+            onSelected: (f) => setState(() => _filter = f),
           ),
-        ],
+        ),
       ),
       body: Column(
         children: [
-          _UserHeader(name: _userName),
           if (_isSyncing) const _SyncingBanner(),
-          if (!_isSyncing && _hasUnsynced) _OfflineBanner(onRetry: _loadTickets),
+          if (!_isSyncing && _hasUnsynced)
+            _OfflineBanner(onRetry: _loadTickets),
           Expanded(
             child: RefreshIndicator(
               onRefresh: _loadTickets,
               color: cs.primary,
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
-                  : _tickets.isEmpty
-                      ? _EmptyState(onAdd: _openCreate)
+                  : filtered.isEmpty
+                      ? _EmptyState(
+                          filter: _filter,
+                          onAdd: _openCreate,
+                        )
                       : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-                          itemCount: _tickets.length,
-                          separatorBuilder: (context, index) => const SizedBox(height: 12),
-                          itemBuilder: (_, i) => TicketCard(ticket: _tickets[i]),
+                          padding:
+                              const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                          itemCount: filtered.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (_, i) => TicketCard(
+                            ticket: filtered[i],
+                            onTap: () => _openDetail(filtered[i]),
+                          ),
                         ),
             ),
           ),
@@ -161,64 +192,60 @@ class _TicketsScreenState extends State<TicketsScreen>
         icon: const Icon(Icons.add_rounded),
         label: const Text('Novo chamado'),
       ),
+      bottomNavigationBar: const AppBottomNav(currentIndex: 1),
     );
   }
 }
 
-class _UserHeader extends StatelessWidget {
-  final String name;
-  const _UserHeader({required this.name});
+// ── Filter bar ──────────────────────────────────────────────────────────────
+
+class _FilterBar extends StatelessWidget {
+  final _Filter selected;
+  final ValueChanged<_Filter> onSelected;
+
+  const _FilterBar({required this.selected, required this.onSelected});
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-      decoration: BoxDecoration(
-        color: cs.primary,
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: Colors.white.withAlpha(40),
-            child: Text(
-              name.isNotEmpty ? name[0].toUpperCase() : 'U',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 18,
+    return SizedBox(
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+        children: _Filter.values.map((f) {
+          final isSelected = f == selected;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              label: Text(f.label),
+              selected: isSelected,
+              onSelected: (_) => onSelected(f),
+              selectedColor: AppTheme.primary,
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey.shade700,
+                fontWeight:
+                    isSelected ? FontWeight.w600 : FontWeight.w400,
+                fontSize: 13,
               ),
+              backgroundColor: Colors.white,
+              side: BorderSide(
+                color: isSelected
+                    ? AppTheme.primary
+                    : Colors.grey.shade300,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              showCheckmark: false,
             ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Olá, $name!',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                'Acompanhe seus chamados abaixo',
-                style: TextStyle(
-                  color: Colors.white.withAlpha(190),
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ],
+          );
+        }).toList(),
       ),
     );
   }
 }
+
+// ── Banners ──────────────────────────────────────────────────────────────────
 
 class _SyncingBanner extends StatelessWidget {
   const _SyncingBanner();
@@ -262,7 +289,8 @@ class _OfflineBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          Icon(Icons.cloud_upload_outlined, size: 16, color: Colors.amber.shade800),
+          Icon(Icons.cloud_upload_outlined,
+              size: 16, color: Colors.amber.shade800),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -285,44 +313,51 @@ class _OfflineBanner extends StatelessWidget {
   }
 }
 
+// ── Empty state ───────────────────────────────────────────────────────────────
+
 class _EmptyState extends StatelessWidget {
+  final _Filter filter;
   final VoidCallback onAdd;
-  const _EmptyState({required this.onAdd});
+  const _EmptyState({required this.filter, required this.onAdd});
 
   @override
   Widget build(BuildContext context) {
+    final isAll = filter == _Filter.all;
     return ListView(
       children: [
         const SizedBox(height: 80),
         Center(
           child: Column(
             children: [
-              Icon(
-                Icons.inbox_rounded,
-                size: 72,
-                color: Colors.grey.shade300,
-              ),
+              Icon(Icons.inbox_rounded, size: 72, color: Colors.grey.shade300),
               const SizedBox(height: 16),
               Text(
-                'Nenhum chamado ainda',
+                isAll
+                    ? 'Nenhum chamado ainda'
+                    : 'Nenhum chamado em "${filter.label}"',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 17,
                   fontWeight: FontWeight.w600,
                   color: Colors.grey.shade500,
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              Text(
-                'Toque no botão abaixo para abrir\nseu primeiro chamado técnico.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
-              ),
-              const SizedBox(height: 28),
-              ElevatedButton.icon(
-                onPressed: onAdd,
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Abrir chamado'),
-              ),
+              if (isAll)
+                Text(
+                  'Toque no botão abaixo para abrir\nseu primeiro chamado técnico.',
+                  textAlign: TextAlign.center,
+                  style:
+                      TextStyle(fontSize: 14, color: Colors.grey.shade400),
+                ),
+              if (isAll) ...[
+                const SizedBox(height: 28),
+                ElevatedButton.icon(
+                  onPressed: onAdd,
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Abrir chamado'),
+                ),
+              ],
             ],
           ),
         ),

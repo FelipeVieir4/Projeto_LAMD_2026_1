@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../data/remote/api_client.dart';
 import '../data/repositories/auth_repository.dart';
 import 'register_screen.dart';
-import 'tickets_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -34,10 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordCtrl.text,
       );
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const TicketsScreen()),
-      );
+      Navigator.of(context).pushReplacementNamed('/home');
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -86,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 20),
               Text(
-                'Bem-vindo ao LAMD',
+                'Bem-vindo ao Fixit LAMD',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 24,

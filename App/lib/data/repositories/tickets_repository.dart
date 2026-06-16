@@ -91,6 +91,22 @@ class TicketsRepository {
     }
   }
 
+  Future<void> cancelTicket(String ticketId) async {
+    final client = ApiClient(token: token);
+    await client.patch('/tickets/$ticketId/status', {'status': 'cancelled'});
+    final db = await LocalDatabase.instance.database;
+    await db.update(
+      'tickets',
+      {
+        'status': 'cancelled',
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+        'is_synced': 1,
+      },
+      where: 'id = ?',
+      whereArgs: [ticketId],
+    );
+  }
+
   Future<void> syncPending() async {
     final db = await LocalDatabase.instance.database;
     final pending = await db.query('tickets', where: 'is_synced = 0');

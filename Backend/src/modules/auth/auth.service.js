@@ -5,7 +5,9 @@ import {
   findUserByEmail,
   findUserById,
   normalizeProgram,
-  sanitizeUser
+  sanitizeUser,
+  updateCustomer,
+  updateCustomerPassword
 } from './auth.store.js';
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'dev-secret-change-me';
@@ -179,6 +181,44 @@ function extractBearerToken(authorizationHeader) {
   }
 
   return token;
+}
+
+export async function updateProfileService(userId, program, payload) {
+  if (program !== 'customer') {
+    const err = new Error('Apenas clientes podem atualizar perfil pelo app.');
+    err.code = 'FORBIDDEN'; err.status = 403; throw err;
+  }
+  const name = String(payload?.name ?? '').trim();
+  if (!name) {
+    const err = new Error('O nome não pode estar vazio.');
+    err.code = 'INVALID_NAME'; err.status = 400; throw err;
+  }
+  const phone = payload?.phone ? String(payload.phone).trim() || null : null;
+  const user = await updateCustomer(userId, { name, phone });
+  if (!user) {
+    const err = new Error('Usuário não encontrado.'); err.status = 404; throw err;
+  }
+  return { user: sanitizeUser(user) };
+}
+
+export async function changePasswordService(userId, program, payload) {
+  if (program !== 'customer') {
+    const err = new Error('Apenas clientes podem alterar senha pelo app.');
+    err.code = 'FORBIDDEN'; err.status = 403; throw err;
+  }
+  const currentPassword = normalizePassword(payload?.currentPassword);
+  const newPassword = normalizePassword(payload?.newPassword);
+  if (newPassword.length < PASSWORD_MIN_LENGTH) {
+    const err = new Error(`A nova senha precisa ter pelo menos ${PASSWORD_MIN_LENGTH} caracteres.`);
+    err.code = 'WEAK_PASSWORD'; err.status = 400; throw err;
+  }
+  const user = await findUserById(program, userId);
+  if (!user || !verifyPassword(currentPassword, user.passwordHash)) {
+    const err = new Error('Senha atual incorreta.');
+    err.code = 'INVALID_CREDENTIALS'; err.status = 401; throw err;
+  }
+  await updateCustomerPassword(userId, hashPassword(newPassword));
+  return { message: 'Senha alterada com sucesso.' };
 }
 
 export async function getAuthenticatedAccount(authorizationHeader) {
