@@ -28,15 +28,22 @@ A API sobe em `http://localhost:3000/api/v1`.
 | Método | Rota | Auth | Descrição |
 |--------|------|------|-----------|
 | `GET` | `/api/v1/health` | — | Health check |
+| **Auth** |
 | `POST` | `/api/v1/auth/register` | — | Cadastro (cliente ou parceiro) |
 | `POST` | `/api/v1/auth/login` | — | Login → retorna JWT |
-| `GET` | `/api/v1/auth/me` | JWT | Conta autenticada |
-| `GET` | `/api/v1/admin/specialties` | JWT + admin-key | Lista especialidades |
+| `GET` | `/api/v1/auth/me` | JWT | Dados da conta autenticada |
+| `PATCH` | `/api/v1/auth/profile` | JWT | Atualiza nome e telefone |
+| `PATCH` | `/api/v1/auth/password` | JWT | Altera senha (requer senha atual) |
+| **Especialidades** |
+| `GET` | `/api/v1/specialties` | — | Lista especialidades ativas (público) |
+| **Admin — Especialidades** |
+| `GET` | `/api/v1/admin/specialties` | JWT + admin-key | Lista todas especialidades |
 | `POST` | `/api/v1/admin/specialties` | JWT + admin-key | Cria especialidade |
 | `PUT` | `/api/v1/admin/specialties/:id` | JWT + admin-key | Atualiza especialidade |
 | `DELETE` | `/api/v1/admin/specialties/:id` | JWT + admin-key | Remove especialidade |
+| **Tickets** |
 | `POST` | `/api/v1/tickets` | JWT | Abre chamado (cliente) |
-| `GET` | `/api/v1/tickets` | JWT | Lista chamados |
+| `GET` | `/api/v1/tickets` | JWT | Lista chamados do usuário |
 | `GET` | `/api/v1/tickets/:id` | JWT | Detalhes do chamado |
 | `PATCH` | `/api/v1/tickets/:id/status` | JWT | Atualiza status |
 
