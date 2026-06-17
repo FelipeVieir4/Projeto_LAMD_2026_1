@@ -107,66 +107,7 @@ O ponto central da Sprint 3 é a estratégia **local-first com sincronização p
 
 ---
 
-## 4. Navegação (solução para Scaffold aninhado)
-
-O padrão anterior usava um `MainShell` com `IndexedStack` sobre três telas que também possuíam `Scaffold`, causando conflitos visuais e de interação (Scaffolds aninhados são explicitamente desaconselhados pelo Flutter).
-
-**Solução adotada:**
-- Cada tela de aba (`HomeScreen`, `TicketsScreen`, `ProfileScreen`) possui seu próprio `Scaffold` com `AppBottomNav` no `bottomNavigationBar`
-- `AppBottomNav` usa apenas rotas nomeadas (sem importar as telas) — evita importações circulares
-- `main.dart` define todas as rotas via `onGenerateRoute`; abas usam `PageRouteBuilder` com `transitionDuration: Duration.zero` para troca instantânea de aba
-- Rotas não-aba (`/ticket-detail`, `/create-ticket`) usam `MaterialPageRoute` com animação normal
-
-```dart
-// main.dart — diferenciação de rotas
-static const _tabRoutes = {'/home', '/tickets', '/profile'};
-
-if (_tabRoutes.contains(settings.name)) {
-  return PageRouteBuilder(
-    transitionDuration: Duration.zero,
-    reverseTransitionDuration: Duration.zero,
-    pageBuilder: (ctx, a1, a2) => page,
-  );
-}
-return MaterialPageRoute(builder: (_) => page);
-```
-
----
-
-## 5. Design System (Fixit LAMD)
-
-| Token | Valor |
-|---|---|
-| Cor primária | `#0054A8` |
-| Fundo geral | `#F0F3FA` |
-| Tipografia | Material 3 padrão (Roboto) |
-| Raio de borda (cards) | 16 dp |
-| Raio de borda (botões) | 12 dp |
-
-**TicketCard** — badge de especialidade com cor semântica:
-
-| Especialidade | Cor |
-|---|---|
-| Elétrica | Azul (`#1565C0`) |
-| Hidráulica | Ciano |
-| Pintura | Laranja |
-| Marcenaria | Marrom |
-| Ar-condicionado | Teal |
-| Outras | Cinza |
-
-**Barra de progresso** (3 dp) no rodapé do card por status:
-
-| Status | Progresso | Cor |
-|---|---|---|
-| Pendente | 15% | Âmbar |
-| Aceito | 40% | Azul |
-| Em andamento | 72% | Roxo |
-| Concluído | 100% | Verde |
-| Cancelado | — | (oculta) |
-
----
-
-## 6. Dependências Flutter
+## 4. Dependências Flutter
 
 | Pacote | Versão | Uso |
 |---|---|---|
@@ -179,7 +120,7 @@ return MaterialPageRoute(builder: (_) => page);
 
 ---
 
-## 7. Estrutura de arquivos (Sprint 3)
+## 5. Estrutura de arquivos (Sprint 3)
 
 ```
 Projeto_LAMD_2026_1/
@@ -224,7 +165,7 @@ Projeto_LAMD_2026_1/
 
 ---
 
-## 8. Como executar
+## 6. Como executar
 
 ### Backend
 ```bash
@@ -246,7 +187,7 @@ flutter run   # com emulador/dispositivo conectado
 
 ---
 
-## 9. Decisões de design
+## 7. Decisões de design
 
 ### Offline-first: por que salvar antes de enviar?
 
@@ -259,10 +200,6 @@ O ID é gerado no app antes do envio (`uuid v4`) para que o ticket possa ser ref
 ### Polling vs. WebSocket para feedback de sync
 
 WebSocket seria mais eficiente, mas adiciona complexidade de infraestrutura além do escopo da sprint. O polling com limite de 10 tentativas (30 segundos) é uma solução pragmática: o banner de status dá feedback visual claro sem complicar a arquitetura.
-
-### Rotas nomeadas em vez de Scaffold aninhado
-
-O padrão `MainShell + IndexedStack` com múltiplos Scaffolds internos causa conflitos no Flutter (sobreposição de superfícies, gestos concorrentes). A migração para rotas nomeadas + `AppBottomNav` compartilhado em cada aba resolve isso sem aumentar a complexidade do código.
 
 ---
 
