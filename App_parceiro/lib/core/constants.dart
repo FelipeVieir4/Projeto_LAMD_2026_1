@@ -1,0 +1,10 @@
+class AppConstants {
+  static const String baseUrl = 'http://10.0.2.2:3000/api/v1';
+  static const String wsUrl = 'ws://10.0.2.2:3000/ws';
+  static const String tokenKey = 'auth_token';
+  static const String userIdKey = 'user_id';
+  static const String userEmailKey = 'user_email';
+  static const String userPhoneKey = 'user_phone';
+  static const String userCompanyNameKey = 'user_company_name';
+  static const String userBioKey = 'user_bio';
+}

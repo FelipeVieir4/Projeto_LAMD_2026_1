@@ -221,6 +221,7 @@ export async function processTicketStatusChangeRequest(payload) {
 
   await publishEvent(Events.TICKET_STATUS_CHANGED, {
     ticketId: updated.id,
+    customerId: updated.customerId,
     previousStatus: ticket.status,
     newStatus: updated.status,
     updatedBy: user.id,

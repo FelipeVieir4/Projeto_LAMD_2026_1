@@ -32,8 +32,8 @@ A API sobe em `http://localhost:3000/api/v1`.
 | `POST` | `/api/v1/auth/register` | — | Cadastro (cliente ou parceiro) |
 | `POST` | `/api/v1/auth/login` | — | Login → retorna JWT |
 | `GET` | `/api/v1/auth/me` | JWT | Dados da conta autenticada |
-| `PATCH` | `/api/v1/auth/profile` | JWT | Atualiza nome e telefone |
-| `PATCH` | `/api/v1/auth/password` | JWT | Altera senha (requer senha atual) |
+| `PATCH` | `/api/v1/auth/profile` | JWT | Atualiza dados do perfil (cliente: nome/telefone; parceiro: empresa/telefone/bio) |
+| `PATCH` | `/api/v1/auth/password` | JWT | Altera senha (requer senha atual) — cliente ou parceiro |
 | **Especialidades** |
 | `GET` | `/api/v1/specialties` | — | Lista especialidades ativas (público) |
 | **Admin — Especialidades** |
@@ -67,6 +67,16 @@ O backend publica eventos no exchange `chamados` (type: `topic`, durable).
 | `ticket.status_changed` | `PATCH /api/v1/tickets/:id/status` | `ticket_status_changed_queue` |
 
 Os consumers são iniciados automaticamente no boot do servidor.
+
+## Tempo real (WebSocket)
+
+Além do REST, o backend expõe um servidor WebSocket em `/ws` (mesma porta da API) que repassa, em tempo real, os eventos consumidos do RabbitMQ — eliminando a necessidade de polling contínuo nos apps:
+
+- Conexão: `ws://<host>:3000/ws?token=<JWT>`
+- Apps com `program=partner` recebem `ticket.created` (novo chamado na fila de pendentes) e `ticket.status_changed` (chamado saiu da fila porque outro parceiro aceitou).
+- Apps com `program=customer` recebem `ticket.status_changed` referente aos seus próprios chamados (ex.: parceiro aceitou/concluiu).
+
+Fluxo: `tickets.service.js` publica o evento no exchange `chamados` → `messaging/consumer.js` consome a fila → `realtime/ws.js` distribui a mensagem aos sockets conectados (`broadcastToPartners` / `broadcastToCustomer`).
 
 ## Variáveis de ambiente
 

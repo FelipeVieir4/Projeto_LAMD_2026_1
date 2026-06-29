@@ -1,6 +1,7 @@
 import { createConsumerChannel, EXCHANGE_NAME } from '../config/rabbitmq.js';
 import { Events } from './publisher.js';
 import { processTicketCreationRequest, processTicketStatusChangeRequest } from '../modules/tickets/tickets.service.js';
+import { broadcastToPartners, broadcastToCustomer } from '../realtime/ws.js';
 
 //Filas que eu criei. Cada fila tem um nome, uma chave de roteamento (routingKey) que corresponde ao evento que ela consome, e um handler que processa as mensagens recebidas.
 const QUEUES = [
@@ -59,6 +60,10 @@ function handleTicketCreated(payload) {
     `Cliente: ${payload.customerId} | ` +
     `Título: "${payload.title}"`
   );
+
+  // Empurra o evento para todos os apps de parceiro conectados via WebSocket,
+  // dispensando polling contínuo no app do prestador.
+  broadcastToPartners(Events.TICKET_CREATED, payload);
 }
 
 function handleTicketStatusChanged(payload) {
@@ -69,6 +74,13 @@ function handleTicketStatusChanged(payload) {
     `Status: ${payload.previousStatus} → ${payload.newStatus} | ` +
     `Atualizado por: ${payload.updatedBy} (${payload.updatedByProgram})`
   );
+
+  // Notifica o cliente dono do chamado (ex.: parceiro aceitou/concluiu).
+  if (payload.customerId) {
+    broadcastToCustomer(payload.customerId, Events.TICKET_STATUS_CHANGED, payload);
+  }
+  // Outros parceiros também são avisados para remover o chamado da lista de pendentes.
+  broadcastToPartners(Events.TICKET_STATUS_CHANGED, payload);
 }
 
 export async function startConsumers() {

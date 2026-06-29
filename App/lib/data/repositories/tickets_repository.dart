@@ -31,9 +31,26 @@ class TicketsRepository {
       final data = response['data'] as List;
       final remoteTickets =
           data.map((e) => Ticket.fromJson(e as Map<String, dynamic>)).toList();
+      final remoteIds = remoteTickets.map((t) => t.id).toList();
 
       final db = await LocalDatabase.instance.database;
       final batch = db.batch();
+
+      // Reconciliação completa: remove do cache local qualquer chamado já
+      // sincronizado que não veio mais na resposta do servidor (ex.: excluído
+      // diretamente no banco por um admin, fora do fluxo normal do app).
+      // Chamados ainda não sincronizados (is_synced = 0) são preservados.
+      if (remoteIds.isEmpty) {
+        batch.delete('tickets', where: 'is_synced = 1');
+      } else {
+        final placeholders = remoteIds.map((_) => '?').join(',');
+        batch.delete(
+          'tickets',
+          where: 'is_synced = 1 AND id NOT IN ($placeholders)',
+          whereArgs: remoteIds,
+        );
+      }
+
       for (final t in remoteTickets) {
         batch.insert(
           'tickets',

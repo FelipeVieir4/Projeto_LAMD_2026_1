@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import app from './app.js';
 import { startConsumers } from './messaging/consumer.js';
+import { initWebSocketServer } from './realtime/ws.js';
 
 const PORT = process.env.PORT || 3000;
 const MOM_RETRIES = 10;
@@ -23,7 +24,9 @@ async function initConsumers() {
   }
 }
 
-app.listen(PORT, async () => {
+const httpServer = app.listen(PORT, async () => {
   console.log(`Backend running on port ${PORT}`);
   await initConsumers();
 });
+
+initWebSocketServer(httpServer);

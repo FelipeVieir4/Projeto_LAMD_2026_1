@@ -286,6 +286,26 @@ export async function updateCustomerPassword(id, passwordHash) {
   return result.rows[0] ?? null;
 }
 
+export async function updatePartner(id, { companyName, phone, bio }) {
+  const result = await query(
+    `UPDATE partners
+     SET company_name = $1, phone = $2, bio = $3, updated_at = NOW()
+     WHERE id = $4
+     RETURNING id`,
+    [companyName, phone ?? null, bio ?? null, id]
+  );
+  if (!result.rows[0]) return null;
+  return findUserById('partner', id);
+}
+
+export async function updatePartnerPassword(id, passwordHash) {
+  const result = await query(
+    `UPDATE partners SET password_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING id`,
+    [passwordHash, id]
+  );
+  return result.rows[0] ?? null;
+}
+
 export function sanitizeUser(user) {
   if (!user) {
     return null;
